@@ -17,9 +17,8 @@
   .tpl:hover{border-color:#999;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
   .tpl-icon{width:40px;height:40px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;border-radius:8px}
   .tpl-icon img{width:100%;height:100%;object-fit:cover}
-  .inp{width:100%;border:1px solid #ccc;border-radius:8px;padding:10px;margin-bottom:12px;font-size:14px;box-sizing:border-box;outline:none}
+  .inp{width:100%;border:1px solid #ccc;border-radius:8px;padding:10px;margin-bottom:12px;font-size:14px;box-sizing:border-box;outline:none;background:#fff}
   .inp:focus{border-color:#666}
-  select.inp{background:#fff}
   .record-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;align-items:flex-start}
   .record-item:last-child{border-bottom:none}
   .rec-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;border-radius:6px}
@@ -48,6 +47,7 @@
   .pin-wrap p{color:#888;font-size:14px;margin-bottom:20px}
   .pin-card{text-align:left;max-width:320px;margin:0 auto}
   .err{color:#e11d48;font-size:12px;margin-bottom:8px}
+  .time-hint{font-size:12px;color:#888;padding:8px;background:#f8f9fa;border-radius:8px;margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -55,7 +55,7 @@
 <div id="modalRoot"></div>
 
 <script>
-/* ==================== 工具 ==================== */
+/* ============ 工具 ============ */
 var PIN_KEY='lifelog_pin', ACC_KEY='lifelog_accounts', LAST_KEY='lifelog_last_account';
 function $(s){ return document.querySelector(s); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -70,42 +70,21 @@ function LSread(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(
 function LSwrite(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){ alert('保存失败，可能浏览器空间不足'); } }
 function dataKey(id){ return 'lifelog_data_'+id; }
 
-/* 根据精度格式化日期为输入框值 */
-function dateToInput(iso, precision){
-  var d = new Date(iso);
-  if (precision === 'day') {
-    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-  }
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
-}
-/* 从输入框值解析成 ISO */
-function inputToISO(value, precision){
-  if (!value) return new Date().toISOString();
-  if (precision === 'day') {
-    // 日期精度：把时分固定成 12:00，避免时区跨天
-    var d = new Date(value + 'T12:00:00');
-    return isNaN(d) ? new Date().toISOString() : d.toISOString();
-  }
-  var d2 = new Date(value);
-  return isNaN(d2) ? new Date().toISOString() : d2.toISOString();
-}
+/* 精度标签 */
+var PREC_LABEL = { minute:'分钟', hour:'小时', day:'日', month:'月', year:'年', none:'无时间' };
 
-/* ==================== 状态 ==================== */
+/* ============ 状态 ============ */
 var state = {
-  view:'lock',
-  accounts:[], currentAccountId:null, data:null,
-  modal:null,
-  range:'today',
-  customFrom:'', customTo:'',
-  pinError:''
+  view:'lock', accounts:[], currentAccountId:null, data:null,
+  modal:null, range:'today', customFrom:'', customTo:'', pinError:''
 };
 
-/* ==================== PIN ==================== */
+/* ============ PIN ============ */
 function hasPin(){ return !!localStorage.getItem(PIN_KEY); }
 function setPin(p){ localStorage.setItem(PIN_KEY, hash(p)); }
 function checkPin(p){ return localStorage.getItem(PIN_KEY)===hash(p); }
 
-/* ==================== 账号 ==================== */
+/* ============ 账号 ============ */
 function loadAccounts(){ state.accounts = LSread(ACC_KEY, []); }
 function saveAccounts(){ LSwrite(ACC_KEY, state.accounts); }
 function getAccount(id){ return state.accounts.filter(function(a){return a.id===id;})[0]||null; }
@@ -120,31 +99,23 @@ function deleteAccount(id){
   saveAccounts(); localStorage.removeItem(dataKey(id));
   if(state.currentAccountId===id){ state.currentAccountId=null; state.data=null; LSwrite(LAST_KEY,null); }
 }
-function renameAccount(id,name){
-  var a=getAccount(id); if(a){ a.name=name; saveAccounts(); }
-}
+function renameAccount(id,name){ var a=getAccount(id); if(a){ a.name=name; saveAccounts(); } }
 
-/* ==================== 数据 ==================== */
+/* ============ 数据 ============ */
 function loadData(accId){
   var raw = LSread(dataKey(accId), null) || {};
   state.data = {
     templates: (raw.templates && raw.templates.length) ? raw.templates : defaultTemplates(),
     records: raw.records || []
   };
-  // 兼容：老模板没 precision 字段，默认补上
-  state.data.templates.forEach(function(t){
-    if(!t.precision) t.precision = 'minute';
-  });
+  state.data.templates.forEach(function(t){ if(!t.precision) t.precision='minute'; });
   state.currentAccountId = accId;
   LSwrite(LAST_KEY, accId);
 }
 function saveData(){ if(state.currentAccountId) LSwrite(dataKey(state.currentAccountId), state.data); }
-function switchAccount(id){
-  if(state.currentAccountId) saveData();
-  loadData(id); state.view='home'; render();
-}
+function switchAccount(id){ if(state.currentAccountId) saveData(); loadData(id); state.view='home'; render(); }
 
-/* ==================== 默认模板 ==================== */
+/* ============ 默认模板 ============ */
 function defaultTemplates(){
   return [
     {id:uid(),name:'早饭',icon:'🍳',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么',precision:'day'},
@@ -157,7 +128,56 @@ function defaultTemplates(){
   ];
 }
 
-/* ==================== 动作 ==================== */
+/* ============ 时间精度解析 ============ */
+function renderTimeInput(precision, currentAt){
+  var d = currentAt ? new Date(currentAt) : new Date();
+  if (precision === 'minute') {
+    var v = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+    return '<input id="recAt" class="inp" type="datetime-local" value="'+v+'">';
+  }
+  if (precision === 'hour') {
+    var dv = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    var opts = '';
+    for (var i=0;i<24;i++) opts += '<option value="'+i+'"'+(i===d.getHours()?' selected':'')+'>'+pad(i)+' 时</option>';
+    return '<div style="display:flex;gap:8px"><input id="recAt" class="inp" type="date" value="'+dv+'" style="flex:2">'+
+      '<select id="recHour" class="inp" style="flex:1">'+opts+'</select></div>';
+  }
+  if (precision === 'day') {
+    var dv2 = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    return '<input id="recAt" class="inp" type="date" value="'+dv2+'">';
+  }
+  if (precision === 'month') {
+    var mv = d.getFullYear()+'-'+pad(d.getMonth()+1);
+    return '<input id="recAt" class="inp" type="month" value="'+mv+'">';
+  }
+  if (precision === 'year') {
+    return '<input id="recAt" class="inp" type="number" min="1900" max="2100" value="'+d.getFullYear()+'" placeholder="年份（如 2026）">';
+  }
+  return '<div class="time-hint">这条记录不关联时间</div>';
+}
+function parseTimeInput(precision){
+  if (precision === 'none') return null;
+  var el = document.getElementById('recAt');
+  if (!el || !el.value) return null;
+  var v = el.value;
+  try {
+    if (precision === 'minute') return new Date(v).toISOString();
+    if (precision === 'hour') {
+      var h = document.getElementById('recHour').value;
+      return new Date(v + 'T' + pad(parseInt(h,10)) + ':00:00').toISOString();
+    }
+    if (precision === 'day') return new Date(v + 'T12:00:00').toISOString();
+    if (precision === 'month') return new Date(v + '-01T12:00:00').toISOString();
+    if (precision === 'year') {
+      var y = parseInt(v, 10);
+      if (!isFinite(y) || y<1900 || y>2100) return null;
+      return new Date(y + '-01-01T12:00:00').toISOString();
+    }
+  } catch(e) { return null; }
+  return null;
+}
+
+/* ============ 动作 ============ */
 function doSetup(){
   var p1=document.getElementById('pin1').value;
   var p2=document.getElementById('pin2').value;
@@ -188,10 +208,7 @@ function doLock(){
   setTimeout(function(){ var el=document.getElementById('pin'); if(el) el.focus(); }, 50);
 }
 function openNewAccount(){ state.modal={type:'newAccount'}; renderModal(); }
-function openRenameAccount(id){
-  var a=getAccount(id); if(!a) return;
-  state.modal={type:'renameAccount', id:id, name:a.name}; renderModal();
-}
+function openRenameAccount(id){ var a=getAccount(id); if(!a) return; state.modal={type:'renameAccount', id:id, name:a.name}; renderModal(); }
 function openChangePin(){ state.modal={type:'changePin'}; renderModal(); }
 function doDeleteAccount(id){
   if(state.accounts.length<=1) return alert('至少要保留一个账号');
@@ -207,7 +224,7 @@ function doDeleteAccount(id){
   render();
 }
 
-/* ==================== 模板/记录操作 ==================== */
+/* ============ 模板/记录 ============ */
 function closeModal(){ document.getElementById('modalRoot').innerHTML=''; state.modal=null; }
 function openRecord(tid){
   var t=state.data.templates.filter(function(x){return x.id===tid;})[0]; if(!t) return;
@@ -217,16 +234,15 @@ function saveRecord(){
   var m=state.modal; if(!m) return;
   var t=m.template;
   var prec = t.precision || 'minute';
-  var aEl=document.getElementById('recAmt'), cEl=document.getElementById('recCon'), atEl=document.getElementById('recAt');
+  var aEl=document.getElementById('recAmt'), cEl=document.getElementById('recCon');
   var amount = aEl?aEl.value.trim():'';
   var content = cEl?cEl.value.trim():'';
-  var atVal = atEl?atEl.value:'';
   if(amount==='' && content===''){ alert('请至少填写数值或内容'); return; }
+  var at = parseTimeInput(prec);
   state.data.records.push({
-    id:uid(), templateId:t.id,
-    at: inputToISO(atVal, prec),
-    amount: amount===''?null:Number(amount),
-    content: content
+    id:uid(), templateId:t.id, at: at,
+    amount: amount===''?null:Number(amount), content: content,
+    createdAt:new Date().toISOString()
   });
   saveData(); closeModal(); render();
 }
@@ -281,10 +297,9 @@ function delTemplate(id){
   saveData(); closeModal(); render();
 }
 
-/* ==================== 统计区间 ==================== */
+/* ============ 统计 ============ */
 function getRangeBounds(){
   var r = state.range;
-  var now = new Date();
   var endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
   if (r === 'all') return [0, endOfToday.getTime()];
   if (r === 'custom') {
@@ -298,13 +313,14 @@ function getRangeBounds(){
   if (r === 'month')   { d.setDate(1); return [d.getTime(), endOfToday.getTime()]; }
   if (r === '7days')   { d.setDate(d.getDate()-6); return [d.getTime(), endOfToday.getTime()]; }
   if (r === '30days')  { d.setDate(d.getDate()-29); return [d.getTime(), endOfToday.getTime()]; }
-  if (r === 'year')    { d.setDate(d.getDate()-364); return [d.getTime(), endOfToday.getTime()]; }
   return [d.getTime(), endOfToday.getTime()];
 }
 function buildStats(){
   var bounds = getRangeBounds();
   var from = bounds[0], to = bounds[1];
+  var isAll = state.range === 'all';
   var rs = state.data.records.filter(function(r){
+    if (r.at === null || r.at === undefined || r.at === '') return isAll; // 无时间的只在"全部"里算
     var t = new Date(r.at).getTime();
     return t >= from && t <= to;
   });
@@ -330,22 +346,15 @@ function buildStats(){
 function setRange(r){
   state.range = r;
   if (r === 'custom') {
-    // 默认填一个本月
-    if (!state.customFrom) {
-      var d = new Date(); d.setDate(1);
-      state.customFrom = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-    }
-    if (!state.customTo) {
-      var t = new Date();
-      state.customTo = t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
-    }
+    if (!state.customFrom) { var d = new Date(); d.setDate(1); state.customFrom = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+    if (!state.customTo) { var t = new Date(); state.customTo = t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); }
   }
   render();
 }
 function setCustomFrom(v){ state.customFrom = v; render(); }
 function setCustomTo(v){ state.customTo = v; render(); }
 
-/* ==================== 渲染 ==================== */
+/* ============ 渲染 ============ */
 function render(){
   var app=document.getElementById('app');
   var v=state.view;
@@ -388,27 +397,29 @@ function renderAccounts(){
     var cur=a.id===state.currentAccountId;
     var cnt=(LSread(dataKey(a.id),{}).records||[]).length;
     html+='<div style="display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid #f0f0f0">'+
-      '<div style="flex:1;min-width:0">'+
-      '<div style="font-size:15px">'+esc(a.name)+(cur?'<span class="tag-badge">当前</span>':'')+'</div>'+
-      '<div style="font-size:12px;color:#888">'+cnt+' 条记录</div>'+
-      '</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:15px">'+esc(a.name)+(cur?'<span class="tag-badge">当前</span>':'')+'</div>'+
+      '<div style="font-size:12px;color:#888">'+cnt+' 条记录</div></div>'+
       (cur?'':'<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="switchAccount(\''+a.id+'\')">切换</button>')+
       '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="openRenameAccount(\''+a.id+'\')">改名</button>'+
       '<button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="doDeleteAccount(\''+a.id+'\')">删除</button>'+
       '</div>';
   });
-  html+='<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openNewAccount()">+ 新建账号</button>';
-  html+='</div>';
+  html+='<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openNewAccount()">+ 新建账号</button></div>';
   html+='<div class="card"><b style="font-size:14px">安全</b>'+
-    '<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openChangePin()">修改 PIN</button>'+
-    '</div>';
+    '<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openChangePin()">修改 PIN</button></div>';
   return html;
 }
 function renderHome(){
   var ts=state.data.templates;
-  var rs=state.data.records.slice().sort(function(a,b){return new Date(b.at)-new Date(a.at);});
-  var groups={},order=[];
-  rs.forEach(function(r){ var k=dayKey(r.at); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
+  var rs=state.data.records.slice().sort(function(a,b){
+    var ta = a.at ? new Date(a.at).getTime() : -1;
+    var tb = b.at ? new Date(b.at).getTime() : -1;
+    return tb - ta;
+  });
+  var timed = rs.filter(function(r){ return r.at; });
+  var untimed = rs.filter(function(r){ return !r.at; });
+  var groups={}, order=[];
+  timed.forEach(function(r){ var k=dayKey(r.at); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
   var acc=getAccount(state.currentAccountId);
   var html='<div class="header"><b>LifeLog</b><div>'+
     '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'accounts\';render()">'+esc(acc?acc.name:'账号')+'</button>'+
@@ -421,43 +432,53 @@ function renderHome(){
     html+='<div class="tpl" onclick="openRecord(\''+t.id+'\')">'+
       (t.image?'<div class="tpl-icon"><img src="'+t.image+'"></div>':'<div class="tpl-icon">'+esc(t.icon)+'</div>')+
       '<div style="font-size:13px;font-weight:500">'+esc(t.name)+'</div>'+
-      '<div style="font-size:11px;color:#aaa">'+esc(t.unit||'')+'</div>'+
-      '</div>';
+      '<div style="font-size:11px;color:#aaa">'+esc(t.unit||'')+'</div></div>';
   });
   html+='<div class="tpl" style="color:#aaa;display:flex;flex-direction:column;align-items:center;justify-content:center" onclick="openTemplate(null)">'+
     '<div style="font-size:24px">＋</div><div style="font-size:12px">新建</div></div>';
   html+='</div></div>';
   html+='<div class="card"><b style="font-size:14px">记录</b>';
   if(!rs.length) html+='<p class="empty">还没有记录，点击上面的卡片开始</p>';
-  else order.forEach(function(k){
-    html+='<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">'+fmtDay(k)+'</div>';
-    groups[k].forEach(function(r){
-      var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0]; if(!t) return;
-      var prec = t.precision || 'minute';
-      var amt=(r.amount!==null && r.amount!==undefined)?'<b>'+fmtNum(r.amount)+(t.unit||'')+'</b>':'';
-      var timeHtml = '';
-      if (prec === 'minute') {
-        timeHtml = '<div style="font-size:12px;color:#aaa;width:40px;flex-shrink:0;padding-top:4px">'+fmtTime(r.at)+'</div>';
-      }
-      html+='<div class="record-item">'+
-        timeHtml +
-        (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
-        '<div style="flex:1;min-width:0;padding-top:2px">'+
-        '<div style="font-size:14px">'+esc(t.name)+' '+amt+'</div>'+
-        (r.content?'<div style="font-size:12px;color:#888;word-break:break-all">'+esc(r.content)+'</div>':'')+
-        '</div>'+
-        '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="if(confirm(\'删除这条记录？\')){state.data.records=state.data.records.filter(function(x){return x.id!==\''+r.id+'\';});saveData();render();}">删</button>'+
-        '</div>';
+  else {
+    order.forEach(function(k){
+      html+='<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">'+fmtDay(k)+'</div>';
+      groups[k].forEach(function(r){ html+=recordRow(r); });
+      html+='</div>';
     });
-    html+='</div>';
-  });
+    if (untimed.length) {
+      html+='<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">无时间</div>';
+      untimed.forEach(function(r){ html+=recordRow(r); });
+      html+='</div>';
+    }
+  }
   html+='</div>';
   return html;
+}
+function recordRow(r){
+  var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0]; if(!t) return '';
+  var prec = t.precision || 'minute';
+  var amt=(r.amount!==null && r.amount!==undefined)?'<b>'+fmtNum(r.amount)+(t.unit||'')+'</b>':'';
+  var timeHtml = '';
+  if (r.at) {
+    if (prec === 'minute') timeHtml = '<div style="font-size:12px;color:#aaa;width:40px;flex-shrink:0;padding-top:4px">'+fmtTime(r.at)+'</div>';
+    else if (prec === 'hour') timeHtml = '<div style="font-size:12px;color:#aaa;width:40px;flex-shrink:0;padding-top:4px">'+pad(new Date(r.at).getHours())+'时</div>';
+    else timeHtml = '<div style="font-size:12px;color:#aaa;width:40px;flex-shrink:0;padding-top:4px">·</div>';
+  } else {
+    timeHtml = '<div style="font-size:12px;color:#ccc;width:40px;flex-shrink:0;padding-top:4px">—</div>';
+  }
+  return '<div class="record-item">'+ timeHtml +
+    (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
+    '<div style="flex:1;min-width:0;padding-top:2px">'+
+    '<div style="font-size:14px">'+esc(t.name)+' '+amt+'</div>'+
+    (r.content?'<div style="font-size:12px;color:#888;word-break:break-all">'+esc(r.content)+'</div>':'')+
+    '</div>'+
+    '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="if(confirm(\'删除这条记录？\')){state.data.records=state.data.records.filter(function(x){return x.id!==\''+r.id+'\';});saveData();render();}">删</button>'+
+    '</div>';
 }
 function renderStats(){
   var quick = [
     ['today','今日'],['week','本周'],['month','本月'],
-    ['7days','最近7天'],['30days','最近30天'],['year','最近一年'],
+    ['7days','最近7天'],['30days','最近30天'],
     ['all','全部'],['custom','自定义']
   ];
   var html='<div class="header"><b>统计</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
@@ -467,23 +488,19 @@ function renderStats(){
   });
   html+='</div>';
   if (state.range === 'custom') {
-    html+='<div class="custom-range show">'+
-      '<span>从</span><input type="date" class="inp" value="'+esc(state.customFrom)+'" onchange="setCustomFrom(this.value)">'+
-      '<span>到</span><input type="date" class="inp" value="'+esc(state.customTo)+'" onchange="setCustomTo(this.value)">'+
-      '</div>';
+    html+='<div class="custom-range show"><span>从</span><input type="date" class="inp" value="'+esc(state.customFrom)+'" onchange="setCustomFrom(this.value)">'+
+      '<span>到</span><input type="date" class="inp" value="'+esc(state.customTo)+'" onchange="setCustomTo(this.value)"></div>';
   }
   var stats=buildStats();
   if(!stats.length){ html+='<div class="card"><p class="empty">这段时间还没有带数值的记录</p></div>'; return html; }
   stats.forEach(function(s){
-    html+='<div class="card">';
-    html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">'+
+    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">'+
       '<div style="font-size:15px;color:#666">'+esc(s.unit)+'</div>'+
       '<div><span style="font-size:24px;font-weight:600">'+fmtNum(s.total)+'</span>'+
       '<span style="font-size:13px;color:#888;margin-left:4px">'+esc(s.unit)+'</span></div></div>';
     s.items.forEach(function(it){
       var pct=s.total>0?(it.sum/s.total*100):0;
-      html+='<div class="stat-row">'+
-        '<div class="stat-label"><span>'+esc(it.icon)+' '+esc(it.name)+' <span class="tag">'+it.count+'笔</span></span>'+
+      html+='<div class="stat-row"><div class="stat-label"><span>'+esc(it.icon)+' '+esc(it.name)+' <span class="tag">'+it.count+'笔</span></span>'+
         '<span><b>'+fmtNum(it.sum)+'</b> '+esc(s.unit)+' <span style="color:#aaa;margin-left:4px">'+Math.round(pct)+'%</span></span></div>'+
         '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pct+'%"></div></div></div>';
     });
@@ -496,13 +513,12 @@ function renderSettings(){
   var html='<div class="header"><b>设置</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
   html+='<div class="card"><b style="font-size:14px">我的模板</b>';
   ts.forEach(function(t){
-    var precLabel = t.precision==='day' ? '日期' : '分钟';
+    var pl = PREC_LABEL[t.precision] || '分钟';
     html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0">'+
       (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
-      '<div style="flex:1;font-size:14px">'+esc(t.name)+' <span class="tag">'+esc(t.unit||'')+' · '+precLabel+'</span></div>'+
+      '<div style="flex:1;font-size:14px">'+esc(t.name)+' <span class="tag">'+esc(t.unit||'')+' · '+pl+'</span></div>'+
       '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="openTemplate(\''+t.id+'\')">编辑</button>'+
-      '<button class="btn btn-danger" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="delTemplate(\''+t.id+'\')">删除</button>'+
-      '</div>';
+      '<button class="btn btn-danger" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="delTemplate(\''+t.id+'\')">删除</button></div>';
   });
   html+='<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openTemplate(null)">+ 新建模板</button></div>';
   return html;
@@ -516,15 +532,12 @@ function renderModal(){
   if(m.type==='record'){
     var t=m.template;
     var prec = t.precision || 'minute';
-    var now = new Date();
-    var atValue = dateToInput(now.toISOString(), prec);
-    var atType = prec==='day' ? 'date' : 'datetime-local';
     html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'+
       (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
       '<b>'+esc(t.name)+'</b><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
     if(t.amountEnabled) html+='<input id="recAmt" class="inp" type="number" step="any" placeholder="数值（'+(t.unit||'')+'）">';
     if(t.contentEnabled) html+='<input id="recCon" class="inp" placeholder="'+(t.contentHint||'内容')+'">';
-    html+='<input id="recAt" class="inp" type="'+atType+'" value="'+atValue+'">';
+    html += renderTimeInput(prec, null);
     html+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button><button class="btn btn-primary" style="flex:1" onclick="saveRecord()">保存</button></div>';
   }
   else if(m.type==='template'){
@@ -538,17 +551,22 @@ function renderModal(){
       '<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="document.getElementById(\'iconFile\').click()">上传图片</button>'+
       (t.image?'<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="clearIcon()">改用 Emoji</button>':'')+
       '</div></div><input type="file" id="iconFile" accept="image/*" style="display:none">'+
-      '<div style="font-size:11px;color:#aaa;margin-top:6px">图片会自动裁剪成正方形并压缩到 96×96</div></div>';
+      '<div style="font-size:11px;color:#aaa;margin-top:6px">图片自动裁剪成正方形并压缩到 96×96</div></div>';
     html+='<input id="tplName" class="inp" value="'+esc(t.name)+'" placeholder="名称（如：午饭）">';
     html+='<input id="tplIcon" class="inp" value="'+esc(t.icon)+'" placeholder="Emoji（如：🍚，上传图片后忽略）">';
     html+='<input id="tplUnit" class="inp" value="'+esc(t.unit)+'" placeholder="单位（如：元、公里、小时）">';
-    html+='<label style="display:block;font-size:14px;margin-bottom:8px">记录时间精度</label>';
+    html+='<label style="display:block;font-size:13px;color:#666;margin-bottom:6px">时间精度</label>';
     html+='<select id="tplPrec" class="inp">'+
-      '<option value="minute" '+(prec==='minute'?'selected':'')+'>精确到分钟（如 12:30）</option>'+
-      '<option value="day" '+(prec==='day'?'selected':'')+'>只记日期（如 2026-09-27）</option>'+
+      '<option value="minute" '+(prec==='minute'?'selected':'')+'>精确到分钟</option>'+
+      '<option value="hour" '+(prec==='hour'?'selected':'')+'>精确到小时</option>'+
+      '<option value="day" '+(prec==='day'?'selected':'')+'>只记日期</option>'+
+      '<option value="month" '+(prec==='month'?'selected':'')+'>只记月份</option>'+
+      '<option value="year" '+(prec==='year'?'selected':'')+'>只记年份</option>'+
+      '<option value="none" '+(prec==='none'?'selected':'')+'>不记录时间</option>'+
       '</select>';
     html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplAmt" '+(t.amountEnabled?'checked':'')+'> 记录数值</label>';
     html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplCon" '+(t.contentEnabled?'checked':'')+'> 记录内容</label>';
+    html+='<div style="font-size:11px;color:#888;margin-bottom:8px">数值和内容至少启用一个</div>';
     html+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button><button class="btn btn-primary" style="flex:1" onclick="saveTemplate()">保存</button></div>';
   }
   else if(m.type==='newAccount'){
@@ -602,7 +620,7 @@ function doChangePin(){
   alert('PIN 已修改');
 }
 
-/* ==================== 启动 ==================== */
+/* ============ 启动 ============ */
 (function init(){
   loadAccounts();
   if(!hasPin()) state.view='setup';
