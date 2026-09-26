@@ -5,90 +5,165 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LifeLog</title>
 <style>
-  body{font-family:sans-serif;background:#f8f9fa;margin:0;padding:16px;color:#333}
+  :root{
+    --bg:#f8f9fa; --card:#fff; --border:#ddd;
+    --text:#333; --text-dim:#888; --text-faint:#aaa;
+    --btn-p-bg:#0f172a; --btn-p-text:#fff;
+    --btn-s-bg:#e2e8f0; --btn-s-text:#333;
+    --inp-bg:#fff; --inp-border:#ccc;
+    --tag-bg:#f1f5f9; --tag-text:#666;
+    --bar-bg:#f1f5f9; --bar-fill:#0f172a; --bar-fill-alt:#94a3b8;
+    --row-border:#f0f0f0; --soft-bg:#f8f9fa;
+    --range-in:#e0e7ff; --range-in-text:#3730a3;
+  }
+  body[data-theme="night"]{
+    --bg:#1a1a1a; --card:#262626; --border:#3a3a3a;
+    --text:#e5e5e5; --text-dim:#9a9a9a; --text-faint:#6a6a6a;
+    --btn-p-bg:#e5e5e5; --btn-p-text:#1a1a1a;
+    --btn-s-bg:#3a3a3a; --btn-s-text:#e5e5e5;
+    --inp-bg:#2e2e2e; --inp-border:#444;
+    --tag-bg:#3a3a3a; --tag-text:#aaa;
+    --bar-bg:#3a3a3a; --bar-fill:#e5e5e5; --bar-fill-alt:#666;
+    --row-border:#333; --soft-bg:#2e2e2e;
+    --range-in:#3a3a5a; --range-in-text:#c5c5e5;
+  }
+  body[data-theme="eye"]{
+    --bg:#f5eedd; --card:#fbf5e6; --border:#e0d5bb;
+    --text:#4a4032; --text-dim:#8a7d66; --text-faint:#a89a80;
+    --btn-p-bg:#4a4032; --btn-p-text:#fbf5e6;
+    --btn-s-bg:#ebe2cc; --btn-s-text:#4a4032;
+    --inp-bg:#fbf5e6; --inp-border:#d0c4a8;
+    --tag-bg:#ebe2cc; --tag-text:#8a7d66;
+    --bar-bg:#ebe2cc; --bar-fill:#4a4032; --bar-fill-alt:#a89a80;
+    --row-border:#ebe2cc; --soft-bg:#f0e8d5;
+    --range-in:#d8caa8; --range-in-text:#4a4032;
+  }
+  body{font-family:sans-serif;background-color:var(--bg);margin:0;padding:16px;color:var(--text);min-height:100vh}
   .container{max-width:600px;margin:0 auto}
-  .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px;margin-bottom:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
   .btn{border:none;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;transition:.15s}
-  .btn-primary{background:#0f172a;color:#fff}.btn-primary:hover{background:#1e293b}
-  .btn-secondary{background:#e2e8f0;color:#333}.btn-secondary:hover{background:#cbd5e1}
+  .btn-primary{background:var(--btn-p-bg);color:var(--btn-p-text)}
+  .btn-primary:hover{opacity:.85}
+  .btn-secondary{background:var(--btn-s-bg);color:var(--btn-s-text)}
+  .btn-secondary:hover{opacity:.85}
   .btn-danger{background:#fee2e2;color:#b91c1c}
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .tpl{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;text-align:center;cursor:pointer;transition:.15s}
-  .tpl:hover{border-color:#999;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+  .tpl{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;cursor:pointer;transition:.15s}
+  .tpl:hover{border-color:var(--text-faint);box-shadow:0 2px 8px rgba(0,0,0,0.08)}
   .tpl-icon{width:40px;height:40px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;border-radius:8px}
   .tpl-icon img{width:100%;height:100%;object-fit:cover}
-  .inp{width:100%;border:1px solid #ccc;border-radius:8px;padding:10px;margin-bottom:12px;font-size:14px;box-sizing:border-box;outline:none;background:#fff}
-  .inp:focus{border-color:#666}
+  .inp{width:100%;border:1px solid var(--inp-border);border-radius:8px;padding:10px;margin-bottom:12px;font-size:14px;box-sizing:border-box;outline:none;background:var(--inp-bg);color:var(--text);font-family:inherit}
+  .inp:focus{border-color:var(--text-dim)}
   .inp-with-badge{padding-right:110px !important}
-  .prec-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:10px;white-space:nowrap;pointer-events:none}
-  .rec-time{font-size:12px;color:#aaa;width:44px;flex-shrink:0;padding-top:4px}
-  .record-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;align-items:flex-start}
+  .prec-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-faint);background:var(--tag-bg);padding:2px 8px;border-radius:10px;white-space:nowrap;pointer-events:none}
+  .rec-time{font-size:12px;color:var(--text-faint);width:44px;flex-shrink:0;padding-top:4px}
+  .record-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--row-border);align-items:flex-start}
   .record-item:last-child{border-bottom:none}
   .rec-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;border-radius:6px}
   .rec-icon img{width:100%;height:100%;object-fit:cover}
   .mask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:999}
-  .modal{background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
-  .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-  .empty{text-align:center;color:#999;padding:20px 0;font-size:14px}
-  .tag{font-size:11px;color:#999}
-  .tag-badge{display:inline-block;font-size:11px;background:#0f172a;color:#fff;padding:1px 8px;border-radius:10px;margin-left:6px}
-  .icon-preview{width:56px;height:56px;border-radius:10px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0}
+  .modal{background:var(--card);color:var(--text);border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
+  .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:6px}
+  .empty{text-align:center;color:var(--text-faint);padding:20px 0;font-size:14px}
+  .tag{font-size:11px;color:var(--text-faint)}
+  .tag-badge{display:inline-block;font-size:11px;background:var(--btn-p-bg);color:var(--btn-p-text);padding:1px 8px;border-radius:10px;margin-left:6px}
+  .icon-preview{width:56px;height:56px;border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0}
   .icon-preview img{width:100%;height:100%;object-fit:cover}
   .stat-row{margin-bottom:10px}
   .stat-row:last-child{margin-bottom:0}
   .stat-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
-  .stat-bar{height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden}
-  .stat-bar-fill{height:100%;background:#0f172a;border-radius:3px}
-  .stat-bar-fill.alt{background:#94a3b8}
+  .stat-bar{height:6px;background:var(--bar-bg);border-radius:3px;overflow:hidden}
+  .stat-bar-fill{height:100%;background:var(--bar-fill);border-radius:3px}
+  .stat-bar-fill.alt{background:var(--bar-fill-alt)}
   .pin-wrap{text-align:center;margin-top:80px}
   .pin-wrap h1{font-size:24px;margin-bottom:8px}
-  .pin-wrap p{color:#888;font-size:14px;margin-bottom:20px}
+  .pin-wrap p{color:var(--text-dim);font-size:14px;margin-bottom:20px}
   .pin-card{text-align:left;max-width:320px;margin:0 auto}
   .err{color:#e11d48;font-size:12px;margin-bottom:8px}
-  .time-hint{font-size:12px;color:#888;padding:8px;background:#f8f9fa;border-radius:8px;margin-bottom:12px}
+  .time-hint{font-size:12px;color:var(--text-dim);padding:8px;background:var(--soft-bg);border-radius:8px;margin-bottom:12px}
   .card-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
-  .card-title-label{font-size:15px;color:#666}
+  .card-title-label{font-size:15px;color:var(--text-dim)}
   .card-title-total{font-size:24px;font-weight:600}
-  .card-title-unit{font-size:13px;color:#888;margin-left:4px;font-weight:400}
+  .card-title-unit{font-size:13px;color:var(--text-dim);margin-left:4px;font-weight:400}
   .stat-tabs{display:flex;gap:6px;margin-bottom:16px}
-  .stat-tab{flex:1;padding:8px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#333;text-align:center}
-  .stat-tab.active{background:#0f172a;color:#fff;border-color:#0f172a}
-  .cal{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;margin-bottom:12px;user-select:none}
+  .stat-tab{flex:1;padding:8px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);text-align:center}
+  .stat-tab.active{background:var(--btn-p-bg);color:var(--btn-p-text);border-color:var(--btn-p-bg)}
+  .cal{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;user-select:none}
   .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .cal-header button{background:none;border:none;font-size:20px;cursor:pointer;padding:2px 10px;color:#666;border-radius:6px}
-  .cal-header button:hover{background:#f1f5f9}
+  .cal-header button{background:none;border:none;font-size:20px;cursor:pointer;padding:2px 10px;color:var(--text-dim);border-radius:6px}
+  .cal-header button:hover{background:var(--soft-bg)}
   .cal-header .cal-title{display:flex;gap:4px;font-size:14px;font-weight:500}
-  .cal-header .cal-title select{border:none;background:transparent;font-size:14px;font-weight:500;cursor:pointer;outline:none;padding:2px;color:#333;font-family:inherit}
-  .cal-week{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:#999;margin-bottom:4px}
+  .cal-header .cal-title select{border:none;background:transparent;font-size:14px;font-weight:500;cursor:pointer;outline:none;padding:2px;color:var(--text);font-family:inherit}
+  .cal-week{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:var(--text-faint);margin-bottom:4px}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;touch-action:none}
-  .cal-day{text-align:center;padding:8px 0;font-size:13px;cursor:pointer;border-radius:6px;color:#333;transition:.05s}
-  .cal-day:hover{background:#f1f5f9}
+  .cal-day{text-align:center;padding:8px 0;font-size:13px;cursor:pointer;border-radius:6px;color:var(--text);transition:.05s}
+  .cal-day:hover{background:var(--soft-bg)}
   .cal-day.empty{visibility:hidden;cursor:default}
-  .cal-day.today{font-weight:700;color:#0f172a}
-  .cal-day.in-range{background:#e0e7ff;color:#3730a3;border-radius:0}
-  .cal-day.range-start{background:#0f172a;color:#fff;border-radius:6px 0 0 6px}
-  .cal-day.range-end{background:#0f172a;color:#fff;border-radius:0 6px 6px 0}
+  .cal-day.today{font-weight:700}
+  .cal-day.in-range{background:var(--range-in);color:var(--range-in-text);border-radius:0}
+  .cal-day.range-start{background:var(--btn-p-bg);color:var(--btn-p-text);border-radius:6px 0 0 6px}
+  .cal-day.range-end{background:var(--btn-p-bg);color:var(--btn-p-text);border-radius:0 6px 6px 0}
   .cal-day.range-start.range-end{border-radius:6px}
-  .cal-day.in-range.today{color:#3730a3}
-  .cal-day.range-start.today,.cal-day.range-end.today{color:#fff}
+  .cal-day.range-start.today,.cal-day.range-end.today{color:var(--btn-p-text)}
   .cal-wrap{display:grid;gap:12px}
   .cal-wrap.double{grid-template-columns:1fr 1fr}
   @media (max-width:520px){ .cal-wrap.double{grid-template-columns:1fr} }
-  .range-info{font-size:13px;color:#333;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;padding:0 4px}
-  .range-info .clear-btn{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;padding:4px}
+  .range-info{font-size:13px;color:var(--text);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;padding:0 4px}
+  .range-info .clear-btn{background:none;border:none;color:var(--text-faint);font-size:12px;cursor:pointer;padding:4px}
   .content-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-  .content-tab{padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#333}
-  .content-tab.active{background:#0f172a;color:#fff;border-color:#0f172a}
-  .content-view-toggle{display:flex;gap:4px;margin-bottom:14px;background:#f1f5f9;padding:3px;border-radius:8px;width:fit-content}
-  .content-view-toggle button{border:none;background:transparent;padding:6px 14px;font-size:13px;cursor:pointer;border-radius:6px;color:#666;font-family:inherit}
-  .content-view-toggle button.active{background:#fff;color:#0f172a;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
+  .content-tab{padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text)}
+  .content-tab.active{background:var(--btn-p-bg);color:var(--btn-p-text);border-color:var(--btn-p-bg)}
+  .content-view-toggle{display:flex;gap:4px;margin-bottom:14px;background:var(--tag-bg);padding:3px;border-radius:8px;width:fit-content}
+  .content-view-toggle button{border:none;background:transparent;padding:6px 14px;font-size:13px;cursor:pointer;border-radius:6px;color:var(--text-dim);font-family:inherit}
+  .content-view-toggle button.active{background:var(--card);color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
   .cloud{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline;padding:8px 0;line-height:1.3}
-  .cloud-word{color:#0f172a;font-weight:500}
-  .cloud-word sup{font-size:0.55em;color:#94a3b8;font-weight:400;margin-left:3px;vertical-align:super}
-  .content-list-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
+  .cloud-word{color:var(--text);font-weight:500}
+  .cloud-word sup{font-size:0.55em;color:var(--text-faint);font-weight:400;margin-left:3px;vertical-align:super}
+  .content-list-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--row-border);font-size:14px}
   .content-list-item:last-child{border-bottom:none}
-  .content-list-date{color:#94a3b8;font-size:12px;width:64px;flex-shrink:0;padding-top:2px}
+  .content-list-date{color:var(--text-faint);font-size:12px;width:64px;flex-shrink:0;padding-top:2px}
   .content-list-text{flex:1;word-break:break-all}
+  .section-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .link-btn{background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;padding:4px}
+
+  /* 主题选择 */
+  .theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+  .theme-opt{border:2px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;text-align:center;font-size:13px;color:var(--text)}
+  .theme-opt.active{border-color:var(--btn-p-bg)}
+  .theme-swatch{height:36px;border-radius:6px;margin-bottom:6px;border:1px solid rgba(0,0,0,0.08)}
+
+  /* 生活名言 */
+  .quote-box{
+    text-align:center;
+    padding:14px 22px;
+    font-style:italic;
+    color:var(--text-dim);
+    font-size:14px;
+    line-height:1.7;
+    margin-bottom:16px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    position:relative;
+  }
+  .quote-box::before{
+    content:'「';
+    color:var(--text-faint);
+    position:absolute;
+    left:10px;
+    top:6px;
+    font-size:18px;
+    font-style:normal;
+  }
+  .quote-box::after{
+    content:'」';
+    color:var(--text-faint);
+    position:absolute;
+    right:10px;
+    bottom:4px;
+    font-size:18px;
+    font-style:normal;
+  }
 </style>
 </head>
 <body>
@@ -96,6 +171,16 @@
 <div id="modalRoot"></div>
 
 <script>
+/* ============ 启动时立即应用主题 ============ */
+(function applyAppearance(){
+  try {
+    // 清理旧版壁纸数据（此版本已移除壁纸功能）
+    localStorage.removeItem('lifelog_wallpaper');
+    var theme = localStorage.getItem('lifelog_theme') || 'light';
+    document.body.setAttribute('data-theme', theme);
+  } catch(e) {}
+})();
+
 /* ============ 工具 ============ */
 var PIN_KEY='lifelog_pin', ACC_KEY='lifelog_accounts', LAST_KEY='lifelog_last_account';
 function $(s){ return document.querySelector(s); }
@@ -127,8 +212,6 @@ var HINT_BY_PREC = {
   none:  ''
 };
 
-/* ============ 时间解析 ============ */
-/* 根据精度格式化 ISO 时间，用于显示 */
 function fmtTimeByPrec(iso, precision){
   if (!iso) return '';
   var d = new Date(iso);
@@ -145,7 +228,6 @@ function fmtTimeByPrec(iso, precision){
   if (precision === 'minute') return y+'/'+mo+'/'+dd+' '+h+':'+mi;
   return '';
 }
-/* 按精度裁剪时间（多余部分归零） */
 function cropByPrec(d, precision){
   var y = d.getFullYear(), mo = d.getMonth(), dd = d.getDate(), h = d.getHours(), mi = d.getMinutes();
   if (precision === 'year') { mo = 0; dd = 1; h = 0; mi = 0; }
@@ -154,64 +236,80 @@ function cropByPrec(d, precision){
   else if (precision === 'hour') { mi = 0; }
   return new Date(y, mo, dd, h, mi, 0, 0);
 }
-/* 解析用户输入的文本 */
+function cnNumToArabic(str){
+  var map = { '零':0, '一':1, '二':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9 };
+  str = str.replace(/([一二三四五六七八九])?十([一二三四五六七八九])?/g, function(m, a, b){
+    var tens = a ? map[a] : 1;
+    var ones = b ? map[b] : 0;
+    return String(tens * 10 + ones);
+  });
+  str = str.replace(/[一二三四五六七八九零]/g, function(c){ return map[c]; });
+  return str;
+}
 function parseTimeText(text, precision){
   if (precision === 'none') return null;
   text = String(text||'').trim();
-
   var now = new Date();
   var y = now.getFullYear(), mo = now.getMonth(), dd = now.getDate();
   var h = now.getHours(), mi = now.getMinutes();
-
   if (!text) return cropByPrec(new Date(y,mo,dd,h,mi), precision).toISOString();
 
-  // 相对日期
-  if (/今天|today/i.test(text)) { /* 用今天的 y/mo/dd */ }
+  if (/今天/.test(text)) { }
   else if (/昨天/.test(text)) { var n1 = new Date(); n1.setDate(n1.getDate()-1); y=n1.getFullYear(); mo=n1.getMonth(); dd=n1.getDate(); }
   else if (/前天/.test(text)) { var n2 = new Date(); n2.setDate(n2.getDate()-2); y=n2.getFullYear(); mo=n2.getMonth(); dd=n2.getDate(); }
 
-  // 规范化：中文分隔符 → 斜杠/冒号
-  var s = text
-    .replace(/[年月\.\-\/]/g, '/')
-    .replace(/[日号]/g, ' ')
-    .replace(/[点时]/g, ':')
-    .replace(/分/g, ' ')
-    .replace(/秒/g, ' ')
-    .replace(/[，,\u3000]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  text = cnNumToArabic(text);
 
-  // 分离日期部分和时间部分
-  var datePart = '', timePart = '';
-  var spIdx = s.indexOf(' ');
-  if (spIdx >= 0) {
-    datePart = s.slice(0, spIdx);
-    timePart = s.slice(spIdx+1);
+  var timeMatch = text.match(/(\d{1,2})\s*[:点]\s*(\d{1,2})?\s*分?/);
+  if (timeMatch) {
+    h = parseInt(timeMatch[1], 10);
+    if (timeMatch[2]) mi = parseInt(timeMatch[2], 10);
+    text = text.replace(timeMatch[0], ' ');
+  }
+
+  var yearMatch  = text.match(/(\d{1,4})\s*年/);
+  var monthMatch = text.match(/(\d{1,2})\s*月/);
+  var dayMatch   = text.match(/(\d{1,2})\s*[日号]/);
+
+  if (yearMatch || monthMatch || dayMatch) {
+    if (yearMatch) {
+      var yv = parseInt(yearMatch[1], 10);
+      if (yv < 100) yv = yv >= 70 ? 1900 + yv : 2000 + yv;
+      y = yv;
+      if (!monthMatch) mo = 0;
+      if (!dayMatch)   dd = 1;
+    }
+    if (monthMatch) {
+      mo = parseInt(monthMatch[1], 10) - 1;
+      if (!dayMatch) dd = 1;
+    }
+    if (dayMatch) dd = parseInt(dayMatch[1], 10);
   } else {
-    if (s.indexOf(':') >= 0) timePart = s;
-    else datePart = s;
-  }
-
-  var nums = datePart.split('/').filter(function(x){ return x !== ''; })
-    .map(function(x){ return parseInt(x,10); })
-    .filter(function(n){ return isFinite(n); });
-
-  if (nums.length === 1) {
-    var n = nums[0];
-    if (n > 31) { y = n; }
-    else if (n > 12) { dd = n; }
-    else { mo = n - 1; }
-  } else if (nums.length === 2) {
-    if (nums[0] > 31) { y = nums[0]; mo = nums[1]-1; }
-    else { mo = nums[0]-1; dd = nums[1]; }
-  } else if (nums.length >= 3) {
-    y = nums[0]; mo = nums[1]-1; dd = nums[2];
-  }
-
-  if (timePart) {
-    var t = timePart.split(':').map(function(x){ return parseInt(x,10); });
-    if (t.length >= 1 && isFinite(t[0])) h = t[0];
-    if (t.length >= 2 && isFinite(t[1])) mi = t[1];
+    var s = text
+      .replace(/[\.\-\/]/g, '/')
+      .replace(/[\s，,\u3000]+/g, '/')
+      .replace(/\/+/g, '/')
+      .replace(/^\/|\/$/g, '');
+    var nums = s.split('/').map(function(x){ return parseInt(x,10); }).filter(function(n){ return isFinite(n); });
+    if (nums.length === 1) {
+      var n = nums[0];
+      if (n >= 100) { y = n; mo = 0; dd = 1; }
+      else if (n > 31) { y = n >= 70 ? 1900 + n : 2000 + n; mo = 0; dd = 1; }
+      else if (n > 12) { dd = n; }
+      else { mo = n - 1; dd = 1; }
+    } else if (nums.length === 2) {
+      if (nums[0] > 12) {
+        var yv2 = nums[0];
+        if (yv2 < 100) yv2 = yv2 >= 70 ? 1900 + yv2 : 2000 + yv2;
+        y = yv2; mo = nums[1] - 1; dd = 1;
+      } else {
+        mo = nums[0] - 1; dd = nums[1];
+      }
+    } else if (nums.length >= 3) {
+      var yv3 = nums[0];
+      if (yv3 < 100) yv3 = yv3 >= 70 ? 1900 + yv3 : 2000 + yv3;
+      y = yv3; mo = nums[1] - 1; dd = nums[2];
+    }
   }
 
   var result = new Date(y, mo, dd, h, mi, 0, 0);
@@ -221,6 +319,7 @@ function parseTimeText(text, precision){
 
 /* ============ 状态 ============ */
 var state = { view:'lock', accounts:[], currentAccountId:null, data:null, modal:null, pinError:'' };
+
 var statState = {
   tab: 'single',
   single: { year: new Date().getFullYear(), month: new Date().getMonth() },
@@ -234,10 +333,29 @@ var statState = {
   contentView: 'cloud'
 };
 
+var historyState = {
+  tab: 'single',
+  single: { year: new Date().getFullYear(), month: new Date().getMonth() },
+  left:   { year: new Date().getFullYear(), month: new Date().getMonth() },
+  right:  (function(){ var n = normalizeMonth(new Date().getFullYear(), new Date().getMonth()+1); return { year:n.year, month:n.month }; })(),
+  selStart: todayStr(),
+  selEnd: todayStr(),
+  dragging: false,
+  dragOrigin: null
+};
+
 /* ============ PIN ============ */
 function hasPin(){ return !!localStorage.getItem(PIN_KEY); }
 function setPin(p){ localStorage.setItem(PIN_KEY, hash(p)); }
 function checkPin(p){ return localStorage.getItem(PIN_KEY)===hash(p); }
+
+/* ============ 主题 ============ */
+function getTheme(){ return localStorage.getItem('lifelog_theme') || 'light'; }
+function setTheme(t){
+  localStorage.setItem('lifelog_theme', t);
+  document.body.setAttribute('data-theme', t);
+  render();
+}
 
 /* ============ 账号 ============ */
 function loadAccounts(){ state.accounts = LSread(ACC_KEY, []); }
@@ -246,7 +364,7 @@ function getAccount(id){ return state.accounts.filter(function(a){return a.id===
 function createAccount(name){
   var acc = { id:uid(), name:name, createdAt:new Date().toISOString() };
   state.accounts.push(acc); saveAccounts();
-  LSwrite(dataKey(acc.id), { templates:defaultTemplates(), records:[] });
+  LSwrite(dataKey(acc.id), { templates:defaultTemplates(), records:[], quote:'' });
   return acc;
 }
 function deleteAccount(id){
@@ -256,12 +374,12 @@ function deleteAccount(id){
 }
 function renameAccount(id,name){ var a=getAccount(id); if(a){ a.name=name; saveAccounts(); } }
 
-/* ============ 数据 ============ */
 function loadData(accId){
   var raw = LSread(dataKey(accId), null) || {};
   state.data = {
     templates: (raw.templates && raw.templates.length) ? raw.templates : defaultTemplates(),
-    records: raw.records || []
+    records: raw.records || [],
+    quote: typeof raw.quote === 'string' ? raw.quote : ''
   };
   state.data.templates.forEach(function(t){ if(!t.precision) t.precision='minute'; });
   state.currentAccountId = accId;
@@ -270,7 +388,6 @@ function loadData(accId){
 function saveData(){ if(state.currentAccountId) LSwrite(dataKey(state.currentAccountId), state.data); }
 function switchAccount(id){ if(state.currentAccountId) saveData(); loadData(id); state.view='home'; render(); }
 
-/* ============ 默认模板 ============ */
 function defaultTemplates(){
   return [
     {id:uid(),name:'早饭',icon:'🍳',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么',precision:'day'},
@@ -283,20 +400,13 @@ function defaultTemplates(){
   ];
 }
 
-/* ============ 时间输入组件 ============ */
-function renderTimeInput(precision){
-  if (precision === 'none') return '<div class="time-hint">这条记录不关联时间</div>';
-  var now = new Date();
-  var val = fmtTimeByPrec(now.toISOString(), precision);
-  var hint = HINT_BY_PREC[precision];
-  var label = PREC_LABEL[precision];
-  return '<div style="margin-bottom:12px">'+
-    '<div style="position:relative">'+
-    '<input id="recAt" class="inp inp-with-badge" style="margin-bottom:0" value="'+esc(val)+'" placeholder="'+esc(hint)+'" autocomplete="off">'+
-    '<span class="prec-badge">'+label+'</span>'+
-    '</div>'+
-    '<div style="font-size:11px;color:#cbd5e1;margin-top:6px">'+esc(hint)+'</div>'+
-    '</div>';
+/* ============ 名言 ============ */
+function saveQuote(){
+  var el = document.getElementById('quoteInput');
+  if (!el) return;
+  state.data.quote = el.value.trim();
+  saveData();
+  render();
 }
 
 /* ============ 动作 ============ */
@@ -345,7 +455,6 @@ function doDeleteAccount(id){
   render();
 }
 
-/* ============ 模板/记录 ============ */
 function closeModal(){ document.getElementById('modalRoot').innerHTML=''; state.modal=null; }
 function openRecord(tid){
   var t=state.data.templates.filter(function(x){return x.id===tid;})[0]; if(!t) return;
@@ -366,6 +475,12 @@ function saveRecord(){
     var text = atEl ? atEl.value.trim() : '';
     at = parseTimeText(text, prec);
     if (at === null) { alert('时间格式无法识别，请重新输入'); return; }
+    var parsedDate = new Date(at);
+    var todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+    if (parsedDate.getTime() > todayEnd.getTime()) {
+      alert('不能记录未来的时间。\n今天：' + todayStr() + '\n输入解析为：' + fmtTimeByPrec(at, 'day'));
+      return;
+    }
   }
   state.data.records.push({
     id:uid(), templateId:t.id, at: at,
@@ -426,71 +541,91 @@ function delTemplate(id){
 }
 
 /* ============ 日历交互 ============ */
+function getCalState(ctx){ return ctx === 'stat' ? statState : historyState; }
+var activeDragCtx = null;
+
 function setStatTab(t){ statState.tab = t; render(); }
-function calPrev(which){
-  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+function setHistoryTab(t){ historyState.tab = t; render(); }
+
+function calPrev(ctx, which){
+  var s = getCalState(ctx);
+  var o = which==='single' ? s.single : which==='left' ? s.left : s.right;
   o.month -= 1;
   var n = normalizeMonth(o.year, o.month);
   o.year = n.year; o.month = n.month;
   render();
 }
-function calNext(which){
-  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+function calNext(ctx, which){
+  var s = getCalState(ctx);
+  var o = which==='single' ? s.single : which==='left' ? s.left : s.right;
   o.month += 1;
   var n = normalizeMonth(o.year, o.month);
   o.year = n.year; o.month = n.month;
   render();
 }
-function calSetYear(which, v){
-  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+function calSetYear(ctx, which, v){
+  var s = getCalState(ctx);
+  var o = which==='single' ? s.single : which==='left' ? s.left : s.right;
   o.year = parseInt(v,10); render();
 }
-function calSetMonth(which, v){
-  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+function calSetMonth(ctx, which, v){
+  var s = getCalState(ctx);
+  var o = which==='single' ? s.single : which==='left' ? s.left : s.right;
   o.month = parseInt(v,10); render();
 }
-function calDayDown(dateStr){
-  var s = statState;
+function calDayDown(ctx, dateStr){
+  var s = getCalState(ctx);
   s.dragOrigin = dateStr;
   s.dragging = true;
   s.selStart = dateStr;
   s.selEnd = dateStr;
   render();
 }
-function calDayEnter(dateStr){
-  var s = statState;
+function calDayEnter(ctx, dateStr){
+  var s = getCalState(ctx);
   if (!s.dragging || !s.dragOrigin) return;
   if (dateStr >= s.dragOrigin) { s.selStart = s.dragOrigin; s.selEnd = dateStr; }
   else { s.selStart = dateStr; s.selEnd = s.dragOrigin; }
   render();
 }
-function clearSel(){
-  statState.selStart = null;
-  statState.selEnd = null;
-  statState.dragging = false;
-  statState.dragOrigin = null;
+function clearStatSel(){
+  statState.selStart = null; statState.selEnd = null;
+  statState.dragging = false; statState.dragOrigin = null;
   render();
 }
-document.addEventListener('pointerup', function(){ statState.dragging = false; });
+function clearHistorySel(){
+  historyState.selStart = null; historyState.selEnd = null;
+  historyState.dragging = false; historyState.dragOrigin = null;
+  render();
+}
+document.addEventListener('pointerup', function(){
+  if (activeDragCtx) {
+    var s = getCalState(activeDragCtx);
+    s.dragging = false;
+    activeDragCtx = null;
+  }
+});
 document.addEventListener('pointerdown', function(e){
   var el = e.target.closest && e.target.closest('[data-cal-date]');
   if (!el) return;
   e.preventDefault();
-  calDayDown(el.dataset.calDate);
+  activeDragCtx = el.dataset.calCtx;
+  calDayDown(activeDragCtx, el.dataset.calDate);
 });
 document.addEventListener('pointermove', function(e){
-  if (!statState.dragging) return;
+  if (!activeDragCtx) return;
+  var s = getCalState(activeDragCtx);
+  if (!s.dragging) return;
   var el = document.elementFromPoint(e.clientX, e.clientY);
-  if (el && el.dataset && el.dataset.calDate) calDayEnter(el.dataset.calDate);
+  if (el && el.dataset && el.dataset.calDate) calDayEnter(activeDragCtx, el.dataset.calDate);
 });
 
-/* ============ 日历渲染 ============ */
-function renderCalendar(which, year, month){
+function renderCalendar(ctx, which, year, month){
+  var s = getCalState(ctx);
   var first = new Date(year, month, 1);
   var startWeekday = (first.getDay() + 6) % 7;
   var daysInMonth = new Date(year, month+1, 0).getDate();
   var tds = todayStr();
-  var s = statState;
 
   var yearOpts = '';
   for (var y=year-5; y<=year+5; y++) yearOpts += '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'年</option>';
@@ -499,12 +634,12 @@ function renderCalendar(which, year, month){
 
   var html = '<div class="cal">';
   html += '<div class="cal-header">'+
-    '<button type="button" onclick="calPrev(\''+which+'\')">‹</button>'+
+    '<button type="button" onclick="calPrev(\''+ctx+'\',\''+which+'\')">‹</button>'+
     '<div class="cal-title">'+
-    '<select onchange="calSetYear(\''+which+'\', this.value)">'+yearOpts+'</select>'+
-    '<select onchange="calSetMonth(\''+which+'\', this.value)">'+monthOpts+'</select>'+
+    '<select onchange="calSetYear(\''+ctx+'\',\''+which+'\', this.value)">'+yearOpts+'</select>'+
+    '<select onchange="calSetMonth(\''+ctx+'\',\''+which+'\', this.value)">'+monthOpts+'</select>'+
     '</div>'+
-    '<button type="button" onclick="calNext(\''+which+'\')">›</button>'+
+    '<button type="button" onclick="calNext(\''+ctx+'\',\''+which+'\')">›</button>'+
     '</div>';
   html += '<div class="cal-week"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>';
   html += '<div class="cal-grid">';
@@ -516,13 +651,12 @@ function renderCalendar(which, year, month){
     if (s.selStart && s.selEnd && dateStr >= s.selStart && dateStr <= s.selEnd) cls += ' in-range';
     if (dateStr === s.selStart) cls += ' range-start';
     if (dateStr === s.selEnd) cls += ' range-end';
-    html += '<div class="'+cls+'" data-cal-date="'+dateStr+'">'+d+'</div>';
+    html += '<div class="'+cls+'" data-cal-date="'+dateStr+'" data-cal-ctx="'+ctx+'">'+d+'</div>';
   }
   html += '</div></div>';
   return html;
 }
-function fmtRangeInfo(){
-  var s = statState;
+function fmtRangeInfo(s){
   if (!s.selStart) return '未选择区间';
   var a = s.selStart, b = s.selEnd || s.selStart;
   var d1 = new Date(a+'T00:00:00'), d2 = new Date(b+'T00:00:00');
@@ -536,17 +670,21 @@ function fmtRangeInfo(){
   return fmt(d1) + ' — ' + fmt(d2) + ' · 共 ' + days + ' 天';
 }
 
-/* ============ 统计计算 ============ */
-function getActiveBounds(){
+function getStatBounds(){
   var s = statState;
   if (!s.selStart) return [0, Date.now()];
   var a = new Date(s.selStart + 'T00:00:00').getTime();
   var b = s.selEnd ? new Date(s.selEnd + 'T23:59:59').getTime() : new Date(s.selStart + 'T23:59:59').getTime();
   return [a, b];
 }
-function filterRecords(){
-  var bounds = getActiveBounds();
-  var from = bounds[0], to = bounds[1];
+function getHistoryBounds(){
+  var s = historyState;
+  if (!s.selStart) return [0, Date.now()];
+  var a = new Date(s.selStart + 'T00:00:00').getTime();
+  var b = s.selEnd ? new Date(s.selEnd + 'T23:59:59').getTime() : new Date(s.selStart + 'T23:59:59').getTime();
+  return [a, b];
+}
+function filterRecordsInBounds(from, to){
   return state.data.records.filter(function(r){
     if (r.at === null || r.at === undefined || r.at === '') return false;
     var t = new Date(r.at).getTime();
@@ -616,6 +754,7 @@ function render(){
   else if(v==='lock') app.innerHTML=renderLock();
   else if(v==='accounts') app.innerHTML=renderAccounts();
   else if(v==='home') app.innerHTML=renderHome();
+  else if(v==='history') app.innerHTML=renderHistory();
   else if(v==='stats') app.innerHTML=renderStats();
   else if(v==='settings') app.innerHTML=renderSettings();
   renderModal();
@@ -630,7 +769,7 @@ function renderSetup(){
     '<input id="pin1" class="inp" type="password" inputmode="numeric" placeholder="设置 PIN（至少 4 位）" onkeydown="if(event.key===\'Enter\')document.getElementById(\'pin2\').focus()">'+
     '<input id="pin2" class="inp" type="password" inputmode="numeric" placeholder="再次输入确认" onkeydown="if(event.key===\'Enter\')doSetup()">'+
     '<button class="btn btn-primary" style="width:100%" onclick="doSetup()">确定</button>'+
-    '<p style="font-size:11px;color:#aaa;margin-top:12px;line-height:1.6">PIN 用于锁定这个网页，防止别人拿你的设备时看到记录。数据只存在浏览器本地，不会上传。</p>'+
+    '<p style="font-size:11px;color:var(--text-faint);margin-top:12px;line-height:1.6">PIN 用于锁定这个网页，防止别人拿你的设备时看到记录。数据只存在浏览器本地，不会上传。</p>'+
     '</div></div>';
 }
 function renderLock(){
@@ -650,9 +789,9 @@ function renderAccounts(){
   state.accounts.forEach(function(a){
     var cur=a.id===state.currentAccountId;
     var cnt=(LSread(dataKey(a.id),{}).records||[]).length;
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid #f0f0f0">'+
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--row-border)">'+
       '<div style="flex:1;min-width:0"><div style="font-size:15px">'+esc(a.name)+(cur?'<span class="tag-badge">当前</span>':'')+'</div>'+
-      '<div style="font-size:12px;color:#888">'+cnt+' 条记录</div></div>'+
+      '<div style="font-size:12px;color:var(--text-dim)">'+cnt+' 条记录</div></div>'+
       (cur?'':'<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="switchAccount(\''+a.id+'\')">切换</button>')+
       '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="openRenameAccount(\''+a.id+'\')">改名</button>'+
       '<button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="doDeleteAccount(\''+a.id+'\')">删除</button>'+
@@ -665,15 +804,11 @@ function renderAccounts(){
 }
 function renderHome(){
   var ts=state.data.templates;
-  var rs=state.data.records.slice().sort(function(a,b){
-    var ta = a.at ? new Date(a.at).getTime() : -1;
-    var tb = b.at ? new Date(b.at).getTime() : -1;
-    return tb - ta;
-  });
-  var timed = rs.filter(function(r){ return r.at; });
-  var untimed = rs.filter(function(r){ return !r.at; });
-  var groups={}, order=[];
-  timed.forEach(function(r){ var k=dayKey(r.at); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
+  var tds = todayStr();
+  var todayRecs = state.data.records.filter(function(r){ return r.at && dayKey(r.at) === tds; })
+    .sort(function(a,b){ return new Date(b.at) - new Date(a.at); });
+  var untimedRecs = state.data.records.filter(function(r){ return !r.at; })
+    .sort(function(a,b){ return new Date(b.createdAt) - new Date(a.createdAt); });
   var acc=getAccount(state.currentAccountId);
   var html='<div class="header"><b>LifeLog</b><div>'+
     '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'accounts\';render()">'+esc(acc?acc.name:'账号')+'</button>'+
@@ -681,33 +816,81 @@ function renderHome(){
     '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="state.view=\'settings\';render()">设置</button>'+
     '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="doLock()">锁定</button>'+
     '</div></div>';
+
+  /* 生活名言 */
+  if (state.data.quote) {
+    html += '<div class="quote-box">'+esc(state.data.quote)+'</div>';
+  }
+
   html+='<div class="card"><b style="font-size:14px">点击记录</b><div class="grid" style="margin-top:12px">';
   ts.forEach(function(t){
     html+='<div class="tpl" onclick="openRecord(\''+t.id+'\')">'+
       (t.image?'<div class="tpl-icon"><img src="'+t.image+'"></div>':'<div class="tpl-icon">'+esc(t.icon)+'</div>')+
       '<div style="font-size:13px;font-weight:500">'+esc(t.name)+'</div>'+
-      '<div style="font-size:11px;color:#aaa">'+esc(t.unit||'')+'</div></div>';
+      '<div style="font-size:11px;color:var(--text-faint)">'+esc(t.unit||'')+'</div></div>';
   });
-  html+='<div class="tpl" style="color:#aaa;display:flex;flex-direction:column;align-items:center;justify-content:center" onclick="openTemplate(null)">'+
+  html+='<div class="tpl" style="color:var(--text-faint);display:flex;flex-direction:column;align-items:center;justify-content:center" onclick="openTemplate(null)">'+
     '<div style="font-size:24px">＋</div><div style="font-size:12px">新建</div></div>';
   html+='</div></div>';
-  html+='<div class="card"><b style="font-size:14px">记录</b>';
-  if(!rs.length) html+='<p class="empty">还没有记录，点击上面的卡片开始</p>';
-  else {
-    order.forEach(function(k){
-      html+='<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">'+fmtDay(k)+'</div>';
-      groups[k].forEach(function(r){ html+=recordRow(r); });
-      html+='</div>';
-    });
-    if (untimed.length) {
-      html+='<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">无时间</div>';
-      untimed.forEach(function(r){ html+=recordRow(r); });
-      html+='</div>';
-    }
-  }
+  html+='<div class="card">';
+  html+='<div class="section-head"><b style="font-size:14px">今天的记录</b>'+
+    '<button class="link-btn" onclick="state.view=\'history\';render()">查看历史 →</button></div>';
+  if(!todayRecs.length) html+='<p class="empty">今天还没有记录</p>';
+  else todayRecs.forEach(function(r){ html+=recordRow(r); });
   html+='</div>';
+  if (untimedRecs.length) {
+    html+='<div class="card"><b style="font-size:14px">无时间的记录</b>';
+    untimedRecs.forEach(function(r){ html+=recordRow(r); });
+    html+='</div>';
+  }
   return html;
 }
+
+function renderHistory(){
+  var s = historyState;
+  var html='<div class="header"><b>历史记录</b>'+
+    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
+  html+='<div class="stat-tabs">'+
+    '<div class="stat-tab'+(s.tab==='single'?' active':'')+'" onclick="setHistoryTab(\'single\')">单月选择</div>'+
+    '<div class="stat-tab'+(s.tab==='double'?' active':'')+'" onclick="setHistoryTab(\'double\')">跨月选择</div>'+
+    '</div>';
+  if (s.tab === 'single') {
+    html += renderCalendar('history', 'single', s.single.year, s.single.month);
+    html += '<div class="range-info"><span>'+fmtRangeInfo(s)+'</span>'+
+      (s.selStart ? '<button class="clear-btn" onclick="clearHistorySel()">清空</button>' : '')+'</div>';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:12px;padding:0 4px">点击某天选中当天，按住拖动选中一段区间</div>';
+  } else {
+    html += '<div class="cal-wrap double">';
+    html += renderCalendar('history', 'left', s.left.year, s.left.month);
+    html += renderCalendar('history', 'right', s.right.year, s.right.month);
+    html += '</div>';
+    html += '<div class="range-info"><span>'+fmtRangeInfo(s)+'</span>'+
+      (s.selStart ? '<button class="clear-btn" onclick="clearHistorySel()">清空</button>' : '')+'</div>';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:12px;padding:0 4px">左右两个日历可以独立切换年月</div>';
+  }
+  var bounds = getHistoryBounds();
+  var rs = filterRecordsInBounds(bounds[0], bounds[1]);
+  rs.sort(function(a,b){ return new Date(b.at) - new Date(a.at); });
+  if(!rs.length){
+    html += '<div class="card"><p class="empty">这段时间还没有记录</p></div>';
+    return html;
+  }
+  var groups = {}, order = [];
+  rs.forEach(function(r){
+    var k = dayKey(r.at);
+    if (!groups[k]) { groups[k] = []; order.push(k); }
+    groups[k].push(r);
+  });
+  html += '<div class="card">';
+  order.forEach(function(k){
+    html += '<div style="margin-top:12px"><div style="font-size:12px;color:var(--text-faint)">'+fmtDay(k)+'</div>';
+    groups[k].forEach(function(r){ html += recordRow(r); });
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 function recordRow(r){
   var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0]; if(!t) return '';
   var prec = t.precision || 'minute';
@@ -718,17 +901,18 @@ function recordRow(r){
     else if (prec === 'hour') timeHtml = '<div class="rec-time">'+pad(new Date(r.at).getHours())+'时</div>';
     else timeHtml = '<div class="rec-time">·</div>';
   } else {
-    timeHtml = '<div class="rec-time" style="color:#ccc">—</div>';
+    timeHtml = '<div class="rec-time" style="color:var(--text-faint)">—</div>';
   }
   return '<div class="record-item">'+ timeHtml +
     (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
     '<div style="flex:1;min-width:0;padding-top:2px">'+
     '<div style="font-size:14px">'+esc(t.name)+' '+amt+'</div>'+
-    (r.content?'<div style="font-size:12px;color:#888;word-break:break-all">'+esc(r.content)+'</div>':'')+
+    (r.content?'<div style="font-size:12px;color:var(--text-dim);word-break:break-all">'+esc(r.content)+'</div>':'')+
     '</div>'+
     '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="if(confirm(\'删除这条记录？\')){state.data.records=state.data.records.filter(function(x){return x.id!==\''+r.id+'\';});saveData();render();}">删</button>'+
     '</div>';
 }
+
 function renderStats(){
   var s = statState;
   var html='<div class="header"><b>统计</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
@@ -737,29 +921,28 @@ function renderStats(){
     '<div class="stat-tab'+(s.tab==='double'?' active':'')+'" onclick="setStatTab(\'double\')">跨月选择</div>'+
     '</div>';
   if (s.tab === 'single') {
-    html += renderCalendar('single', s.single.year, s.single.month);
-    html += '<div class="range-info"><span>'+fmtRangeInfo()+'</span>'+
-      (s.selStart ? '<button class="clear-btn" onclick="clearSel()">清空</button>' : '')+'</div>';
-    html += '<div style="font-size:11px;color:#aaa;margin-bottom:12px;padding:0 4px">点击某天选中当天，按住拖动选中一段区间</div>';
+    html += renderCalendar('stat', 'single', s.single.year, s.single.month);
+    html += '<div class="range-info"><span>'+fmtRangeInfo(s)+'</span>'+
+      (s.selStart ? '<button class="clear-btn" onclick="clearStatSel()">清空</button>' : '')+'</div>';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:12px;padding:0 4px">点击某天选中当天，按住拖动选中一段区间</div>';
   } else {
     html += '<div class="cal-wrap double">';
-    html += renderCalendar('left', s.left.year, s.left.month);
-    html += renderCalendar('right', s.right.year, s.right.month);
+    html += renderCalendar('stat', 'left', s.left.year, s.left.month);
+    html += renderCalendar('stat', 'right', s.right.year, s.right.month);
     html += '</div>';
-    html += '<div class="range-info"><span>'+fmtRangeInfo()+'</span>'+
-      (s.selStart ? '<button class="clear-btn" onclick="clearSel()">清空</button>' : '')+'</div>';
-    html += '<div style="font-size:11px;color:#aaa;margin-bottom:12px;padding:0 4px">左右两个日历可以独立切换年月，按住拖动跨月选择</div>';
+    html += '<div class="range-info"><span>'+fmtRangeInfo(s)+'</span>'+
+      (s.selStart ? '<button class="clear-btn" onclick="clearStatSel()">清空</button>' : '')+'</div>';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:12px;padding:0 4px">左右两个日历可以独立切换年月</div>';
   }
-
-  var rs = filterRecords();
+  var bounds = getStatBounds();
+  var rs = filterRecordsInBounds(bounds[0], bounds[1]);
   var amountStats = buildAmountStats(rs);
   var contentStats = buildContentStats(rs);
-
   if (!rs.length) {
     html+='<div class="card"><p class="empty">这段时间还没有记录</p></div>';
     return html;
   }
-
+  /* 1. 数值账 */
   if (amountStats.length) {
     amountStats.forEach(function(st){
       html+='<div class="card"><div class="card-title">'+
@@ -769,13 +952,15 @@ function renderStats(){
       st.items.forEach(function(it){
         var pct=st.total>0?(it.sum/st.total*100):0;
         html+='<div class="stat-row"><div class="stat-label"><span>'+(it.image?'<img src="'+it.image+'" style="width:16px;height:16px;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-right:4px">':esc(it.icon)+' ')+esc(it.name)+' <span class="tag">'+it.count+'笔</span></span>'+
-          '<span><b>'+fmtNum(it.sum)+'</b> '+esc(st.unit)+' <span style="color:#aaa;margin-left:4px">'+Math.round(pct)+'%</span></span></div>'+
+          '<span><b>'+fmtNum(it.sum)+'</b> '+esc(st.unit)+' <span style="color:var(--text-faint);margin-left:4px">'+Math.round(pct)+'%</span></span></div>'+
           '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pct+'%"></div></div></div>';
       });
       html+='</div>';
     });
   }
-
+  /* 2. 内容账 */
+  html += renderContentSection(rs);
+  /* 3. 记录条数 */
   if (contentStats.length) {
     var totalCount = contentStats.reduce(function(a,c){ return a + c.count; }, 0);
     html+='<div class="card"><div class="card-title">'+
@@ -794,8 +979,6 @@ function renderStats(){
     });
     html+='</div>';
   }
-
-  html += renderContentSection(rs);
   return html;
 }
 
@@ -809,11 +992,9 @@ function renderContentSection(rs){
     }
   });
   if (!tplIds.length) return '';
-
   if (!statState.contentTemplateId || tplIds.indexOf(statState.contentTemplateId) < 0) {
     statState.contentTemplateId = tplIds[0];
   }
-
   var html = '<div class="card">';
   html += '<div class="card-title"><div class="card-title-label">内容</div></div>';
   html += '<div class="content-tabs">';
@@ -829,7 +1010,6 @@ function renderContentSection(rs){
     '<button class="'+(statState.contentView==='cloud'?'active':'')+'" onclick="setContentView(\'cloud\')">词语云</button>'+
     '<button class="'+(statState.contentView==='list'?'active':'')+'" onclick="setContentView(\'list\')">时间列表</button>'+
     '</div>';
-
   if (statState.contentView === 'cloud') {
     var cloud = buildContentCloud(rs, statState.contentTemplateId);
     if (!cloud.length) {
@@ -861,18 +1041,37 @@ function renderContentSection(rs){
       });
     }
   }
-
   html += '</div>';
   return html;
 }
 
 function renderSettings(){
   var ts=state.data.templates;
+  var theme = getTheme();
   var html='<div class="header"><b>设置</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
+
+  /* 外观 */
+  html+='<div class="card"><b style="font-size:14px">外观</b>';
+  html+='<div style="font-size:12px;color:var(--text-dim);margin:10px 0 4px">主题</div>';
+  html+='<div class="theme-grid">'+
+    '<div class="theme-opt'+(theme==='light'?' active':'')+'" onclick="setTheme(\'light\')"><div class="theme-swatch" style="background:#f8f9fa;border-color:#ddd"></div>白天</div>'+
+    '<div class="theme-opt'+(theme==='night'?' active':'')+'" onclick="setTheme(\'night\')"><div class="theme-swatch" style="background:#1a1a1a;border-color:#3a3a3a"></div>夜晚</div>'+
+    '<div class="theme-opt'+(theme==='eye'?' active':'')+'" onclick="setTheme(\'eye\')"><div class="theme-swatch" style="background:#f5eedd;border-color:#e0d5bb"></div>护眼</div>'+
+    '</div>';
+  html+='</div>';
+
+  /* 生活名言 */
+  html+='<div class="card"><b style="font-size:14px">生活名言</b>';
+  html+='<div style="font-size:12px;color:var(--text-dim);margin:8px 0 10px">显示在首页顶部，留空则不显示</div>';
+  html+='<input id="quoteInput" class="inp" value="'+esc(state.data.quote||'')+'" placeholder="写一句话给自己">';
+  html+='<button class="btn btn-secondary" style="font-size:13px;padding:6px 14px" onclick="saveQuote()">保存</button>';
+  html+='</div>';
+
+  /* 模板 */
   html+='<div class="card"><b style="font-size:14px">我的模板</b>';
   ts.forEach(function(t){
     var pl = PREC_LABEL[t.precision] || '精确到分钟';
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0">'+
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--row-border)">'+
       (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
       '<div style="flex:1;font-size:14px">'+esc(t.name)+' <span class="tag">'+esc(t.unit||'')+' · '+pl+'</span></div>'+
       '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="openTemplate(\''+t.id+'\')">编辑</button>'+
@@ -895,25 +1094,35 @@ function renderModal(){
       '<b>'+esc(t.name)+'</b><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
     if(t.amountEnabled) html+='<input id="recAmt" class="inp" type="number" step="any" placeholder="数值（'+(t.unit||'')+'）">';
     if(t.contentEnabled) html+='<input id="recCon" class="inp" placeholder="'+(t.contentHint||'内容')+'">';
-    html += renderTimeInput(prec);
+    if (prec === 'none') {
+      html += '<div class="time-hint">这条记录不关联时间</div>';
+    } else {
+      var now = new Date();
+      var val = fmtTimeByPrec(now.toISOString(), prec);
+      var hint = HINT_BY_PREC[prec];
+      html += '<div style="margin-bottom:12px"><div style="position:relative">'+
+        '<input id="recAt" class="inp inp-with-badge" style="margin-bottom:0" value="'+esc(val)+'" placeholder="'+esc(hint)+'" autocomplete="off">'+
+        '<span class="prec-badge">'+PREC_LABEL[prec]+'</span>'+
+        '</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">'+esc(hint)+'</div></div>';
+    }
     html+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button><button class="btn btn-primary" style="flex:1" onclick="saveRecord()">保存</button></div>';
   }
   else if(m.type==='template'){
     var t=m.template;
     var prec = t.precision || 'minute';
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><b>'+(t.id?'编辑':'新建')+'模板</b><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
-    html+='<div style="margin-bottom:12px"><div style="font-size:12px;color:#888;margin-bottom:8px">图标</div>'+
+    html+='<div style="margin-bottom:12px"><div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">图标</div>'+
       '<div style="display:flex;align-items:center;gap:12px">'+
       '<div class="icon-preview">'+(t.image?'<img src="'+t.image+'">':esc(t.icon))+'</div>'+
       '<div style="display:flex;flex-direction:column;gap:6px">'+
       '<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="document.getElementById(\'iconFile\').click()">上传图片</button>'+
       (t.image?'<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="clearIcon()">改用 Emoji</button>':'')+
       '</div></div><input type="file" id="iconFile" accept="image/*" style="display:none">'+
-      '<div style="font-size:11px;color:#aaa;margin-top:6px">图片自动裁剪成正方形并压缩到 96×96</div></div>';
+      '<div style="font-size:11px;color:var(--text-faint);margin-top:6px">图片自动裁剪成正方形并压缩到 96×96</div></div>';
     html+='<input id="tplName" class="inp" value="'+esc(t.name)+'" placeholder="名称（如：午饭）">';
     html+='<input id="tplIcon" class="inp" value="'+esc(t.icon)+'" placeholder="Emoji（如：🍚，上传图片后忽略）">';
     html+='<input id="tplUnit" class="inp" value="'+esc(t.unit)+'" placeholder="单位（如：元、公里、小时）">';
-    html+='<label style="display:block;font-size:13px;color:#666;margin-bottom:6px">时间精度</label>';
+    html+='<label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px">时间精度</label>';
     html+='<select id="tplPrec" class="inp">'+
       '<option value="minute" '+(prec==='minute'?'selected':'')+'>精确到分钟</option>'+
       '<option value="hour" '+(prec==='hour'?'selected':'')+'>精确到小时</option>'+
@@ -924,7 +1133,7 @@ function renderModal(){
       '</select>';
     html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplAmt" '+(t.amountEnabled?'checked':'')+'> 记录数值</label>';
     html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplCon" '+(t.contentEnabled?'checked':'')+'> 记录内容</label>';
-    html+='<div style="font-size:11px;color:#888;margin-bottom:8px">数值和内容至少启用一个</div>';
+    html+='<div style="font-size:11px;color:var(--text-faint);margin-bottom:8px">数值和内容至少启用一个</div>';
     html+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button><button class="btn btn-primary" style="flex:1" onclick="saveTemplate()">保存</button></div>';
   }
   else if(m.type==='newAccount'){
@@ -978,7 +1187,6 @@ function doChangePin(){
   alert('PIN 已修改');
 }
 
-/* 时间输入框失焦时，规范化显示 */
 document.addEventListener('blur', function(e){
   if (!e.target || e.target.id !== 'recAt') return;
   var m = state.modal;
