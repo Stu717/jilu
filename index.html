@@ -68,4 +68,367 @@ function defaultTemplates(){
     {id:uid(),name:'早饭',icon:'🍳',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
     {id:uid(),name:'午饭',icon:'🍚',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
     {id:uid(),name:'晚饭',icon:'🍜',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
-    {id:uid(),name:'运动',icon:'🏃',image:null
+    {id:uid(),name:'运动',icon:'🏃',image:null,unit:'公里',amountEnabled:true,contentEnabled:true,contentHint:'做了什么'},
+    {id:uid(),name:'睡眠',icon:'😴',image:null,unit:'小时',amountEnabled:true,contentEnabled:true,contentHint:'睡眠质量'},
+    {id:uid(),name:'阅读',icon:'📖',image:null,unit:'小时',amountEnabled:true,contentEnabled:true,contentHint:'书名'},
+    {id:uid(),name:'随手记',icon:'📝',image:null,unit:'',amountEnabled:false,contentEnabled:true,contentHint:'记点什么'}
+  ];
+}
+
+function enterUser(user){
+  state.user=user; LSwrite(SESS_KEY,user.id);
+  var raw=LSread('lifelog_data_'+user.id, null) || {};
+  state.data={
+    templates: (raw.templates && raw.templates.length) ? raw.templates : defaultTemplates(),
+    records: raw.records || []
+  };
+  state.view='home'; state.modal=null; render();
+}
+
+/* ============ 认证 ============ */
+function doRegister(){
+  var u=$('#aUser').value.trim(), p=$('#aPass').value;
+  if(u.length<2) return alert('用户名至少2个字');
+  if(p.length<4) return alert('密码至少4个字');
+  var users=LSread(USERS_KEY,[]);
+  if(users.some(function(x){return x.username===u;})) return alert('用户名已存在');
+  var user={id:uid(),username:u,pass:hash(p)};
+  users.push(user); LSwrite(USERS_KEY,users);
+  enterUser(user);
+}
+function doLogin(){
+  var u=$('#aUser').value.trim(), p=$('#aPass').value;
+  if(!u||!p) return alert('请输入用户名和密码');
+  var users=LSread(USERS_KEY,[]);
+  var user=users.filter(function(x){return x.username===u;})[0];
+  if(!user) return alert('用户不存在，请先注册');
+  if(user.pass!==hash(p)) return alert('密码错误');
+  enterUser(user);
+}
+function doLogout(){
+  LSwrite(SESS_KEY,null); state.user=null; state.data=null; state.view='auth'; state.modal=null; render();
+}
+
+/* ============ 弹窗 ============ */
+function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; state.modal = null; }
+
+function openRecord(tid){
+  var t=state.data.templates.filter(function(x){return x.id===tid;})[0];
+  if(!t) return;
+  state.modal={type:'record',template:t}; renderModal();
+}
+function saveRecord(){
+  var m=state.modal; if(!m) return;
+  var t=m.template;
+  var amountEl=document.getElementById('recAmt'), contentEl=document.getElementById('recCon'), atEl=document.getElementById('recAt');
+  var amount=amountEl?amountEl.value.trim():'';
+  var content=contentEl?contentEl.value.trim():'';
+  var at=atEl?atEl.value:'';
+  if(amount==='' && content===''){ alert('请至少填写数值或内容'); return; }
+  state.data.records.push({
+    id:uid(), templateId:t.id,
+    at: at?new Date(at).toISOString():new Date().toISOString(),
+    amount: amount===''?null:Number(amount),
+    content: content
+  });
+  saveData(); closeModal(); render();
+}
+function openTemplate(tid){
+  var t;
+  if(tid){
+    t=state.data.templates.filter(function(x){return x.id===tid;})[0];
+    if(!t) return;
+    state.modal={type:'template', template:JSON.parse(JSON.stringify(t))};
+  } else {
+    state.modal={type:'template', template:{id:null,name:'',icon:'📌',image:null,unit:'',amountEnabled:true,contentEnabled:true}};
+  }
+  renderModal();
+}
+function handleIconUpload(file){
+  if(!file) return;
+  if(file.size>10*1024*1024){ alert('图片太大了，请选择 10MB 以内的图片'); return; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas'); canvas.width=96; canvas.height=96;
+      var ctx=canvas.getContext('2d');
+      var min=Math.min(img.width,img.height);
+      var sx=(img.width-min)/2, sy=(img.height-min)/2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, 96, 96);
+      state.modal.template.image=canvas.toDataURL('image/png');
+      renderModal();
+    };
+    img.onerror=function(){ alert('图片加载失败，请换一张'); };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function clearIcon(){ state.modal.template.image=null; renderModal(); }
+
+function saveTemplate(){
+  var m=state.modal; if(!m) return;
+  var t=m.template;
+  var name=document.getElementById('tplName').value.trim();
+  if(!name) return alert('请输入模板名称');
+  var icon=document.getElementById('tplIcon').value || '📌';
+  var unit=document.getElementById('tplUnit').value.trim();
+  var amountEnabled=document.getElementById('tplAmt').checked;
+  var contentEnabled=document.getElementById('tplCon').checked;
+  if(t.id){
+    var existing=state.data.templates.filter(function(x){return x.id===t.id;})[0];
+    if(existing){
+      existing.name=name; existing.icon=icon; existing.image=t.image;
+      existing.unit=unit; existing.amountEnabled=amountEnabled; existing.contentEnabled=contentEnabled;
+    }
+  } else {
+    state.data.templates.push({
+      id:uid(), name:name, icon:icon, image:t.image, unit:unit,
+      amountEnabled:amountEnabled, contentEnabled:contentEnabled, defaultAmount:'', contentHint:''
+    });
+  }
+  saveData(); closeModal(); render();
+}
+function delTemplate(id){
+  if(!confirm('确定删除此模板？其下所有记录也会被删除')) return;
+  state.data.records=state.data.records.filter(function(r){return r.templateId!==id;});
+  state.data.templates=state.data.templates.filter(function(t){return t.id!==id;});
+  saveData(); closeModal(); render();
+}
+
+/* ============ 统计逻辑 ============ */
+function timeFrom(range){
+  var d=new Date(); d.setHours(0,0,0,0);
+  if(range==='today') return d.getTime();
+  if(range==='week'){ var w=(d.getDay()+6)%7; d.setDate(d.getDate()-w); return d.getTime(); }
+  if(range==='month'){ d.setDate(1); return d.getTime(); }
+  return 0;
+}
+
+function buildStats(){
+  var from=timeFrom(state.range);
+  var rs=state.data.records.filter(function(r){
+    return new Date(r.at).getTime() >= from;
+  });
+  var byUnit={};   // { 单位: { total, items: [{ tplId, name, icon, image, sum, count }] } }
+  rs.forEach(function(r){
+    var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0];
+    if(!t) return;
+    if(r.amount===null || r.amount===undefined || r.amount==='') return;
+    var u=t.unit && t.unit.trim() ? t.unit.trim() : '（无单位）';
+    if(!byUnit[u]) byUnit[u]={ total:0, items:{} };
+    if(!byUnit[u].items[t.id]) byUnit[u].items[t.id]={ name:t.name, icon:t.icon, image:t.image, sum:0, count:0 };
+    var v=Number(r.amount)||0;
+    byUnit[u].total += v;
+    byUnit[u].items[t.id].sum += v;
+    byUnit[u].items[t.id].count += 1;
+  });
+  // 把 items 转成数组并按 sum 降序
+  var result=[];
+  Object.keys(byUnit).forEach(function(u){
+    var arr=Object.keys(byUnit[u].items).map(function(k){ return byUnit[u].items[k]; });
+    arr.sort(function(a,b){ return b.sum - a.sum; });
+    result.push({ unit:u, total:byUnit[u].total, items:arr });
+  });
+  // 数字大的单位排前面
+  result.sort(function(a,b){ return b.total - a.total; });
+  return result;
+}
+
+/* ============ 渲染 ============ */
+function render(){
+  var app=document.getElementById('app');
+  if(state.view==='auth') app.innerHTML=renderAuth();
+  else if(state.view==='home') app.innerHTML=renderHome();
+  else if(state.view==='settings') app.innerHTML=renderSettings();
+  else if(state.view==='stats') app.innerHTML=renderStats();
+}
+function iconHtml(t, cls){
+  if(t.image) return '<div class="'+(cls||'tpl-icon')+'"><img src="'+t.image+'" alt=""></div>';
+  return '<div class="'+(cls||'tpl-icon')+'">'+esc(t.icon)+'</div>';
+}
+function renderAuth(){
+  return '<div style="text-align:center;margin-top:60px">'+
+    '<h1 style="font-size:24px">LifeLog</h1>'+
+    '<p style="color:#888;font-size:14px;margin-bottom:20px">选一个词组，记一笔</p>'+
+    '<div class="card" style="text-align:left">'+
+    '<input id="aUser" class="inp" placeholder="用户名">'+
+    '<input id="aPass" class="inp" type="password" placeholder="密码">'+
+    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="doRegister()">注册新账户</button>'+
+    '<button class="btn btn-secondary" style="width:100%" onclick="doLogin()">登录</button>'+
+    '</div>'+
+    '<p style="font-size:11px;color:#aaa;margin-top:16px">数据保存在浏览器本地，清除浏览器数据会丢失记录</p>'+
+    '</div>';
+}
+function renderHome(){
+  var ts=state.data.templates;
+  var rs=state.data.records.slice().sort(function(a,b){return new Date(b.at)-new Date(a.at);});
+  var groups={}, order=[];
+  rs.forEach(function(r){ var k=dayKey(r.at); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
+
+  var html='<div class="header"><b>LifeLog</b><div>'+
+    '<span style="color:#888;font-size:12px;margin-right:8px">'+esc(state.user.username)+'</span>'+
+    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'stats\';render()">统计</button>'+
+    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="state.view=\'settings\';render()">设置</button>'+
+    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="doLogout()">退出</button>'+
+    '</div></div>';
+
+  html+='<div class="card"><b style="font-size:14px">点击记录</b><div class="grid" style="margin-top:12px">';
+  ts.forEach(function(t){
+    html+='<div class="tpl" onclick="openRecord(\''+t.id+'\')">'+
+      iconHtml(t,'tpl-icon')+
+      '<div style="font-size:13px;font-weight:500">'+esc(t.name)+'</div>'+
+      '<div style="font-size:11px;color:#aaa">'+esc(t.unit||'')+'</div>'+
+      '</div>';
+  });
+  html+='<div class="tpl" style="color:#aaa;display:flex;flex-direction:column;align-items:center;justify-content:center" onclick="openTemplate(null)">'+
+    '<div style="font-size:24px">＋</div><div style="font-size:12px">新建</div></div>';
+  html+='</div></div>';
+
+  html+='<div class="card"><b style="font-size:14px">记录</b>';
+  if(!rs.length) html+='<p class="empty">还没有记录，点击上面的卡片开始</p>';
+  else order.forEach(function(k){
+    html+='<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">'+fmtDay(k)+'</div>';
+    groups[k].forEach(function(r){
+      var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0];
+      if(!t) return;
+      var amt=(r.amount!==null && r.amount!==undefined)?'<b>'+fmtNum(r.amount)+(t.unit||'')+'</b>':'';
+      html+='<div class="record-item">'+
+        '<div style="font-size:12px;color:#aaa;width:40px;flex-shrink:0;padding-top:4px">'+fmtTime(r.at)+'</div>'+
+        iconHtml(t,'rec-icon')+
+        '<div style="flex:1;min-width:0;padding-top:2px">'+
+        '<div style="font-size:14px">'+esc(t.name)+' '+amt+'</div>'+
+        (r.content?'<div style="font-size:12px;color:#888;word-break:break-all">'+esc(r.content)+'</div>':'')+
+        '</div>'+
+        '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="if(confirm(\'删除这条记录？\')){state.data.records=state.data.records.filter(function(x){return x.id!==\''+r.id+'\';});saveData();render();}">删</button>'+
+        '</div>';
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+function renderStats(){
+  var ranges=[['today','今日'],['week','本周'],['month','本月'],['all','全部']];
+  var html='<div class="header"><b>统计</b>'+
+    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
+
+  html+='<div style="margin-bottom:16px">';
+  ranges.forEach(function(r){
+    html+='<button class="range-btn'+(state.range===r[0]?' active':'')+'" onclick="state.range=\''+r[0]+'\';render()">'+r[1]+'</button>';
+  });
+  html+='</div>';
+
+  var stats=buildStats();
+  if(!stats.length){
+    html+='<div class="card"><p class="empty">这段时间还没有带数值的记录</p></div>';
+    return html;
+  }
+
+  stats.forEach(function(s){
+    html+='<div class="card">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">'+
+      '<div style="font-size:15px;color:#666">'+esc(s.unit)+'</div>'+
+      '<div><span style="font-size:24px;font-weight:600">'+fmtNum(s.total)+'</span>'+
+      '<span style="font-size:13px;color:#888;margin-left:4px">'+esc(s.unit)+'</span></div>'+
+      '</div>';
+    s.items.forEach(function(it){
+      var pct=s.total>0 ? (it.sum/s.total*100) : 0;
+      html+='<div class="stat-row">'+
+        '<div class="stat-label">'+
+        '<span>'+esc(it.icon)+' '+esc(it.name)+' <span class="tag">'+it.count+'笔</span></span>'+
+        '<span><b>'+fmtNum(it.sum)+'</b> '+esc(s.unit)+' <span style="color:#aaa;margin-left:4px">'+Math.round(pct)+'%</span></span>'+
+        '</div>'+
+        '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pct+'%"></div></div>'+
+        '</div>';
+    });
+    html+='</div>';
+  });
+
+  return html;
+}
+
+function renderSettings(){
+  var ts=state.data.templates;
+  var html='<div class="header"><b>设置</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
+  html+='<div class="card"><b style="font-size:14px">我的模板</b>';
+  ts.forEach(function(t){
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0">'+
+      iconHtml(t,'rec-icon')+
+      '<div style="flex:1;font-size:14px">'+esc(t.name)+' <span class="tag">'+esc(t.unit||'')+'</span></div>'+
+      '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="openTemplate(\''+t.id+'\')">编辑</button>'+
+      '<button class="btn btn-danger" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="delTemplate(\''+t.id+'\')">删除</button>'+
+      '</div>';
+  });
+  html+='<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openTemplate(null)">+ 新建模板</button></div>';
+  return html;
+}
+
+function renderModal(){
+  var mr=document.getElementById('modalRoot');
+  var m=state.modal;
+  if(!m){ mr.innerHTML=''; return; }
+  var html='<div class="mask" onclick="if(event.target===this) closeModal()">';
+  html+='<div class="modal" onclick="event.stopPropagation()">';
+
+  if(m.type==='record'){
+    var t=m.template;
+    html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'+
+      iconHtml(t,'rec-icon')+'<b>'+esc(t.name)+'</b>'+
+      '<button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
+    if(t.amountEnabled) html+='<input id="recAmt" class="inp" type="number" step="any" placeholder="数值（'+(t.unit||'')+'）">';
+    if(t.contentEnabled) html+='<input id="recCon" class="inp" placeholder="'+(t.contentHint||'内容')+'">';
+    html+='<input id="recAt" class="inp" type="datetime-local" value="'+new Date().toISOString().slice(0,16)+'">';
+    html+='<div style="display:flex;gap:8px;margin-top:8px">'+
+      '<button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button>'+
+      '<button class="btn btn-primary" style="flex:1" onclick="saveRecord()">保存</button></div>';
+  }
+  else if(m.type==='template'){
+    var t=m.template;
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
+      '<b>'+(t.id?'编辑':'新建')+'模板</b>'+
+      '<button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
+    html+='<div style="margin-bottom:12px">'+
+      '<div style="font-size:12px;color:#888;margin-bottom:8px">图标</div>'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+      '<div class="icon-preview">'+(t.image?'<img src="'+t.image+'" alt="">':esc(t.icon))+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px">'+
+      '<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="document.getElementById(\'iconFile\').click()">上传图片</button>'+
+      (t.image?'<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="clearIcon()">改用 Emoji</button>':'')+
+      '</div></div>'+
+      '<input type="file" id="iconFile" accept="image/*" style="display:none">'+
+      '<div style="font-size:11px;color:#aaa;margin-top:6px">图片会自动裁剪成正方形并压缩到 96×96</div>'+
+      '</div>';
+    html+='<input id="tplName" class="inp" value="'+esc(t.name)+'" placeholder="名称（如：午饭）">';
+    html+='<input id="tplIcon" class="inp" value="'+esc(t.icon)+'" placeholder="Emoji（如：🍚，上传图片后此项忽略）">';
+    html+='<input id="tplUnit" class="inp" value="'+esc(t.unit)+'" placeholder="单位（如：元、公里、小时，可留空）">';
+    html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplAmt" '+(t.amountEnabled?'checked':'')+'> 记录数值</label>';
+    html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplCon" '+(t.contentEnabled?'checked':'')+'> 记录内容</label>';
+    html+='<div style="display:flex;gap:8px;margin-top:8px">'+
+      '<button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button>'+
+      '<button class="btn btn-primary" style="flex:1" onclick="saveTemplate()">保存</button></div>';
+  }
+  html+='</div></div>';
+  mr.innerHTML=html;
+
+  var iconFile=document.getElementById('iconFile');
+  if(iconFile){
+    iconFile.addEventListener('change', function(e){
+      handleIconUpload(e.target.files && e.target.files[0]);
+      e.target.value='';
+    });
+  }
+}
+
+/* ============ 启动 ============ */
+(function init(){
+  var sid=LSread(SESS_KEY,null);
+  var users=LSread(USERS_KEY,[]);
+  var user=sid?users.filter(function(x){return x.id===sid;})[0]:null;
+  if(user) enterUser(user);
+  else { state.view='auth'; render(); }
+})();
+</script>
+</body>
+</html>
