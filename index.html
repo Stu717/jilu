@@ -9,23 +9,34 @@
   .container{max-width:600px;margin:0 auto}
   .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px;margin-bottom:16px}
   .btn{border:none;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;transition:.15s}
-  .btn-primary{background:#0f172a;color:#fff}
-  .btn-primary:hover{background:#1e293b}
-  .btn-secondary{background:#e2e8f0;color:#333}
-  .btn-secondary:hover{background:#cbd5e1}
+  .btn-primary{background:#0f172a;color:#fff}.btn-primary:hover{background:#1e293b}
+  .btn-secondary{background:#e2e8f0;color:#333}.btn-secondary:hover{background:#cbd5e1}
   .btn-danger{background:#fee2e2;color:#b91c1c}
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .tpl{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;text-align:center;cursor:pointer;transition:.15s}
   .tpl:hover{border-color:#999;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+  .tpl-icon{width:40px;height:40px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;border-radius:8px}
+  .tpl-icon img{width:100%;height:100%;object-fit:cover}
   .inp{width:100%;border:1px solid #ccc;border-radius:8px;padding:10px;margin-bottom:12px;font-size:14px;box-sizing:border-box;outline:none}
   .inp:focus{border-color:#666}
   .record-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;align-items:flex-start}
   .record-item:last-child{border-bottom:none}
+  .rec-icon{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;border-radius:6px}
+  .rec-icon img{width:100%;height:100%;object-fit:cover}
   .mask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:999}
   .modal{background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto}
   .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
   .empty{text-align:center;color:#999;padding:20px 0;font-size:14px}
   .tag{font-size:11px;color:#999}
+  .icon-preview{width:56px;height:56px;border-radius:10px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0}
+  .icon-preview img{width:100%;height:100%;object-fit:cover}
+  .range-btn{padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:none;background:#e2e8f0;color:#333;margin-right:6px}
+  .range-btn.active{background:#0f172a;color:#fff}
+  .stat-row{margin-bottom:10px}
+  .stat-row:last-child{margin-bottom:0}
+  .stat-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+  .stat-bar{height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden}
+  .stat-bar-fill{height:100%;background:#0f172a;border-radius:3px}
 </style>
 </head>
 <body>
@@ -33,10 +44,9 @@
 <div id="modalRoot"></div>
 
 <script>
-/* ==================== 工具函数 ==================== */
-var USERS_KEY = 'lifelog_users';
-var SESS_KEY = 'lifelog_session';
-var state = { user: null, data: null, view: 'auth', modal: null };
+/* ============ 工具 ============ */
+var USERS_KEY = 'lifelog_users', SESS_KEY = 'lifelog_session';
+var state = { user: null, data: null, view: 'auth', modal: null, range: 'today' };
 
 function $(s){ return document.querySelector(s); }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -46,286 +56,16 @@ function pad(n){ return n<10?'0'+n:''+n; }
 function fmtTime(iso){ var d=new Date(iso); return pad(d.getHours())+':'+pad(d.getMinutes()); }
 function dayKey(iso){ var d=new Date(iso); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function fmtDay(k){ var t=dayKey(new Date().toISOString()); var y=dayKey(new Date(Date.now()-86400000).toISOString()); if(k===t)return'今天'; if(k===y)return'昨天'; var p=k.split('-'); return parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日'; }
+function fmtNum(n){ var x=Number(n); if(!isFinite(x)) return '0'; return String(Math.round(x*100)/100); }
 function LSread(k,def){ try { var v=localStorage.getItem(k); return v?JSON.parse(v):def; } catch(e){ return def; } }
-function LSwrite(k,v){ try { localStorage.setItem(k,JSON.stringify(v)); } catch(e){ alert('保存失败，可能是浏览器隐私模式限制'); } }
+function LSwrite(k,v){ try { localStorage.setItem(k,JSON.stringify(v)); } catch(e){ alert('保存失败，可能是浏览器空间不足'); } }
 
-/* ==================== 数据操作 ==================== */
+/* ============ 数据 ============ */
 function saveData(){ if(state.user) LSwrite('lifelog_data_'+state.user.id, state.data); }
 
 function defaultTemplates(){
   return [
-    {id:uid(),name:'早饭',icon:'🍳',unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
-    {id:uid(),name:'午饭',icon:'🍚',unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
-    {id:uid(),name:'晚饭',icon:'🍜',unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
-    {id:uid(),name:'运动',icon:'🏃',unit:'公里',amountEnabled:true,contentEnabled:true,contentHint:'做了什么'},
-    {id:uid(),name:'睡眠',icon:'😴',unit:'小时',amountEnabled:true,contentEnabled:true,contentHint:'睡眠质量'},
-    {id:uid(),name:'阅读',icon:'📖',unit:'页',amountEnabled:true,contentEnabled:true,contentHint:'书名'},
-    {id:uid(),name:'随手记',icon:'📝',unit:'',amountEnabled:false,contentEnabled:true,contentHint:'记点什么'}
-  ];
-}
-
-function enterUser(user){
-  state.user=user; LSwrite(SESS_KEY,user.id);
-  var raw=LSread('lifelog_data_'+user.id, null) || {};
-  state.data={
-    templates: (raw.templates && raw.templates.length) ? raw.templates : defaultTemplates(),
-    records: raw.records || []
-  };
-  state.view='home'; state.modal=null; render();
-}
-
-/* ==================== 认证 ==================== */
-function doRegister(){
-  var u=$('#aUser').value.trim(), p=$('#aPass').value;
-  if(u.length<2) return alert('用户名至少2个字');
-  if(p.length<4) return alert('密码至少4个字');
-  var users=LSread(USERS_KEY,[]);
-  if(users.some(function(x){return x.username===u;})) return alert('用户名已存在');
-  var user={id:uid(),username:u,pass:hash(p)};
-  users.push(user); LSwrite(USERS_KEY,users);
-  enterUser(user);
-}
-
-function doLogin(){
-  var u=$('#aUser').value.trim(), p=$('#aPass').value;
-  if(!u||!p) return alert('请输入用户名和密码');
-  var users=LSread(USERS_KEY,[]);
-  var user=users.filter(function(x){return x.username===u;})[0];
-  if(!user) return alert('用户不存在，请先注册');
-  if(user.pass!==hash(p)) return alert('密码错误');
-  enterUser(user);
-}
-
-function doLogout(){
-  LSwrite(SESS_KEY,null); state.user=null; state.data=null; state.view='auth'; state.modal=null; render();
-}
-
-/* ==================== 弹窗操作 ==================== */
-function closeModal(){
-  document.getElementById('modalRoot').innerHTML = '';
-  state.modal = null;
-}
-
-function openRecord(tid){
-  var t=state.data.templates.filter(function(x){return x.id===tid;})[0];
-  if(!t) return;
-  state.modal={type:'record',template:t};
-  renderModal();
-}
-
-function saveRecord(){
-  var m=state.modal; if(!m) return;
-  var t=m.template;
-  var amountEl = document.getElementById('recAmt');
-  var contentEl = document.getElementById('recCon');
-  var atEl = document.getElementById('recAt');
-  
-  var amount = amountEl ? amountEl.value.trim() : '';
-  var content = contentEl ? contentEl.value.trim() : '';
-  var at = atEl ? atEl.value : '';
-
-  if(amount === '' && content === ''){
-    alert('请至少填写数值或内容');
-    return;
-  }
-
-  state.data.records.push({
-    id: uid(),
-    templateId: t.id,
-    at: at ? new Date(at).toISOString() : new Date().toISOString(),
-    amount: amount === '' ? null : Number(amount),
-    content: content
-  });
-  saveData();
-  closeModal();
-  render();
-}
-
-function openTemplate(tid){
-  var t;
-  if(tid){
-    t = state.data.templates.filter(function(x){return x.id===tid;})[0];
-    if(!t) return;
-    state.modal = {type:'template', template: JSON.parse(JSON.stringify(t))};
-  } else {
-    state.modal = {type:'template', template: {id:null, name:'', icon:'📌', unit:'', amountEnabled:true, contentEnabled:true}};
-  }
-  renderModal();
-}
-
-function saveTemplate(){
-  var m=state.modal; if(!m) return;
-  var t=m.template;
-  var name = document.getElementById('tplName').value.trim();
-  if(!name) return alert('请输入模板名称');
-
-  if(t.id){
-    var existing = state.data.templates.filter(function(x){return x.id===t.id;})[0];
-    if(existing){
-      existing.name = name;
-      existing.icon = document.getElementById('tplIcon').value || '📌';
-      existing.unit = document.getElementById('tplUnit').value;
-      existing.amountEnabled = document.getElementById('tplAmt').checked;
-      existing.contentEnabled = document.getElementById('tplCon').checked;
-    }
-  } else {
-    state.data.templates.push({
-      id: uid(),
-      name: name,
-      icon: document.getElementById('tplIcon').value || '📌',
-      unit: document.getElementById('tplUnit').value,
-      amountEnabled: document.getElementById('tplAmt').checked,
-      contentEnabled: document.getElementById('tplCon').checked,
-      defaultAmount: '',
-      contentHint: ''
-    });
-  }
-  saveData();
-  closeModal();
-  render();
-}
-
-function delTemplate(id){
-  if(!confirm('确定删除此模板？其下所有记录也会被删除')) return;
-  state.data.records = state.data.records.filter(function(r){return r.templateId!==id;});
-  state.data.templates = state.data.templates.filter(function(t){return t.id!==id;});
-  saveData();
-  closeModal();
-  render();
-}
-
-/* ==================== 渲染 ==================== */
-function render(){
-  var app = document.getElementById('app');
-  if(state.view === 'auth') app.innerHTML = renderAuth();
-  else if(state.view === 'home') app.innerHTML = renderHome();
-  else if(state.view === 'settings') app.innerHTML = renderSettings();
-}
-
-function renderAuth(){
-  return '<div style="text-align:center;margin-top:60px">'+
-    '<h1 style="font-size:24px">LifeLog</h1>'+
-    '<p style="color:#888;font-size:14px;margin-bottom:20px">选一个词组，记一笔</p>'+
-    '<div class="card" style="text-align:left">'+
-    '<input id="aUser" class="inp" placeholder="用户名">'+
-    '<input id="aPass" class="inp" type="password" placeholder="密码">'+
-    '<button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="doRegister()">注册新账户</button>'+
-    '<button class="btn btn-secondary" style="width:100%" onclick="doLogin()">登录</button>'+
-    '</div>'+
-    '<p style="font-size:11px;color:#aaa;margin-top:16px">数据保存在浏览器本地，清除浏览器数据会丢失记录</p>'+
-    '</div>';
-}
-
-function renderHome(){
-  var ts = state.data.templates;
-  var rs = state.data.records.slice().sort(function(a,b){return new Date(b.at)-new Date(a.at);});
-  var groups = {}, order = [];
-  rs.forEach(function(r){ var k = dayKey(r.at); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
-
-  var html = '<div class="header"><b>LifeLog</b><div>'+
-    '<span style="color:#888;font-size:12px;margin-right:8px">'+esc(state.user.username)+'</span>'+
-    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'settings\';render()">设置</button>'+
-    '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="doLogout()">退出</button>'+
-    '</div></div>';
-
-  html += '<div class="card"><b style="font-size:14px">点击记录</b><div class="grid" style="margin-top:12px">';
-  ts.forEach(function(t){
-    html += '<div class="tpl" onclick="openRecord(\''+t.id+'\')">'+
-      '<div style="font-size:24px">'+esc(t.icon)+'</div>'+
-      '<div style="font-size:13px;font-weight:500">'+esc(t.name)+'</div>'+
-      '<div style="font-size:11px;color:#aaa">'+esc(t.unit||'')+'</div>'+
-      '</div>';
-  });
-  html += '<div class="tpl" style="color:#aaa;display:flex;flex-direction:column;align-items:center;justify-content:center" onclick="openTemplate(null)">'+
-    '<div style="font-size:24px">＋</div><div style="font-size:12px">新建</div></div>';
-  html += '</div></div>';
-
-  html += '<div class="card"><b style="font-size:14px">记录</b>';
-  if(!rs.length) html += '<p class="empty">还没有记录，点击上面的卡片开始</p>';
-  else order.forEach(function(k){
-    html += '<div style="margin-top:12px"><div style="font-size:12px;color:#aaa">'+fmtDay(k)+'</div>';
-    groups[k].forEach(function(r){
-      var t = state.data.templates.filter(function(x){return x.id===r.templateId;})[0];
-      if(!t) return;
-      var amt = (r.amount !== null && r.amount !== undefined) ? '<b>'+r.amount+(t.unit||'')+'</b>' : '';
-      html += '<div class="record-item">'+
-        '<div style="font-size:12px;color:#aaa;width:40px;flex-shrink:0">'+fmtTime(r.at)+'</div>'+
-        '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:14px">'+esc(t.icon)+' '+esc(t.name)+' '+amt+'</div>'+
-        (r.content ? '<div style="font-size:12px;color:#888;word-break:break-all">'+esc(r.content)+'</div>' : '')+
-        '</div>'+
-        '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="if(confirm(\'删除这条记录？\')){state.data.records=state.data.records.filter(function(x){return x.id!==\''+r.id+'\';});saveData();render();}">删</button>'+
-        '</div>';
-    });
-    html += '</div>';
-  });
-  html += '</div>';
-  return html;
-}
-
-function renderSettings(){
-  var ts = state.data.templates;
-  var html = '<div class="header"><b>设置</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
-  html += '<div class="card"><b style="font-size:14px">我的模板</b>';
-  ts.forEach(function(t){
-    html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f0f0f0">'+
-      '<div style="font-size:20px">'+esc(t.icon)+'</div>'+
-      '<div style="flex:1;font-size:14px">'+esc(t.name)+' <span class="tag">'+esc(t.unit||'')+'</span></div>'+
-      '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="openTemplate(\''+t.id+'\')">编辑</button>'+
-      '<button class="btn btn-danger" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="delTemplate(\''+t.id+'\')">删除</button>'+
-      '</div>';
-  });
-  html += '<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="openTemplate(null)">+ 新建模板</button></div>';
-  return html;
-}
-
-function renderModal(){
-  var mr = document.getElementById('modalRoot');
-  var m = state.modal;
-  if(!m){ mr.innerHTML = ''; return; }
-  
-  var html = '<div class="mask" onclick="if(event.target===this) closeModal()">';
-  html += '<div class="modal" onclick="event.stopPropagation()">';
-
-  if(m.type === 'record'){
-    var t = m.template;
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
-      '<span style="font-size:24px">'+esc(t.icon)+'</span><b>'+esc(t.name)+'</b>'+
-      '<button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
-    if(t.amountEnabled) html += '<input id="recAmt" class="inp" type="number" step="any" placeholder="数值（'+(t.unit||'')+'）">';
-    if(t.contentEnabled) html += '<input id="recCon" class="inp" placeholder="'+(t.contentHint||'内容')+'">';
-    html += '<input id="recAt" class="inp" type="datetime-local" value="'+new Date().toISOString().slice(0,16)+'">';
-    html += '<div style="display:flex;gap:8px;margin-top:8px">'+
-      '<button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button>'+
-      '<button class="btn btn-primary" style="flex:1" onclick="saveRecord()">保存</button></div>';
-  } 
-  else if(m.type === 'template'){
-    var t = m.template;
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
-      '<b>'+(t.id?'编辑':'新建')+'模板</b>'+
-      '<button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
-    html += '<input id="tplName" class="inp" value="'+esc(t.name)+'" placeholder="名称（如：午饭）">';
-    html += '<input id="tplIcon" class="inp" value="'+esc(t.icon)+'" placeholder="图标（如：🍚）">';
-    html += '<input id="tplUnit" class="inp" value="'+esc(t.unit)+'" placeholder="单位（如：元、公里，可留空）">';
-    html += '<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplAmt" '+(t.amountEnabled?'checked':'')+'> 记录数值</label>';
-    html += '<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplCon" '+(t.contentEnabled?'checked':'')+'> 记录内容</label>';
-    html += '<div style="display:flex;gap:8px;margin-top:8px">'+
-      '<button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button>'+
-      '<button class="btn btn-primary" style="flex:1" onclick="saveTemplate()">保存</button></div>';
-  }
-
-  html += '</div></div>';
-  mr.innerHTML = html;
-}
-
-/* ==================== 启动 ==================== */
-(function init(){
-  var sid = LSread(SESS_KEY, null);
-  var users = LSread(USERS_KEY, []);
-  var user = sid ? users.filter(function(x){return x.id===sid;})[0] : null;
-  if(user) enterUser(user);
-  else { state.view='auth'; render(); }
-})();
-</script>
-</body>
-</html>
+    {id:uid(),name:'早饭',icon:'🍳',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
+    {id:uid(),name:'午饭',icon:'🍚',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
+    {id:uid(),name:'晚饭',icon:'🍜',image:null,unit:'元',amountEnabled:true,contentEnabled:true,contentHint:'吃了什么'},
+    {id:uid(),name:'运动',icon:'🏃',image:null
