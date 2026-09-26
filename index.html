@@ -3,91 +3,516 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LifeLog · 一句话记一件事</title>
+<title>LifeLog</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  html{-webkit-text-size-adjust:100%}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
-  .inp{width:100%;border:1px solid #e2e8f0;border-radius:.6rem;padding:.45rem .65rem;font-size:.875rem;outline:none;background:#fff;color:#0f172a}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .inp{width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:14px;outline:none;background:#fff}
   .inp:focus{border-color:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.15)}
-  .btn{border-radius:.6rem;padding:.45rem .9rem;font-size:.875rem;font-weight:500;transition:.15s;white-space:nowrap;cursor:pointer}
-  .btn:disabled{opacity:.55;cursor:not-allowed}
-  .btn-primary{background:#0f172a;color:#fff}.btn-primary:hover:not(:disabled){background:#1e293b}
+  .btn{border-radius:8px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;transition:.15s;border:none}
+  .btn-primary{background:#0f172a;color:#fff}.btn-primary:hover{background:#1e293b}
   .btn-ghost{background:#f1f5f9;color:#334155}.btn-ghost:hover{background:#e2e8f0}
-  .btn-danger{background:#fee2e2;color:#b91c1c}.btn-danger:hover{background:#fecaca}
-  .card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem}
-  .spin{display:inline-block;width:13px;height:13px;border:2px solid #cbd5e1;border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
-  @keyframes sp{to{transform:rotate(360deg)}}
-  .evt{background:#fff;border:1px solid #e2e8f0;border-radius:1rem;padding:.8rem;text-align:left;transition:.15s;cursor:pointer;width:100%}
+  .btn-danger{background:#fee2e2;color:#b91c1c}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px}
+  .evt{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;cursor:pointer;text-align:left;width:100%;transition:.15s}
   .evt:hover{border-color:#94a3b8;box-shadow:0 2px 10px rgba(15,23,42,.06)}
-  .pill{padding:.25rem .7rem;border-radius:999px;font-size:.75rem;background:#f1f5f9;color:#64748b;transition:.15s;cursor:pointer;border:none}
+  .pill{padding:4px 12px;border-radius:999px;font-size:12px;background:#f1f5f9;color:#64748b;cursor:pointer;border:none}
   .pill.on{background:#0f172a;color:#fff}
-  .draft{border:1px solid #e2e8f0;border-radius:.75rem;padding:.75rem;background:#fff}
-  .draft-new{border-color:#f59e0b;background:#fffbeb}
-  .hidden{display:none!important}
 </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
-
-<!-- ========== 登录页 ========== -->
-<div id="authView" class="min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-sm">
-    <div class="text-center mb-6">
-      <div class="text-3xl font-semibold tracking-tight">LifeLog</div>
-      <div class="text-sm text-slate-500 mt-1">一句话，记一件事</div>
-    </div>
-    <div class="card p-6 space-y-3">
-      <input id="authUser" class="inp" placeholder="用户名" autocomplete="username">
-      <input id="authPass" class="inp" type="password" placeholder="密码" autocomplete="current-password">
-      <div id="authMsg" class="text-xs text-rose-600 min-h-[16px]"></div>
-      <button id="loginBtn" class="btn btn-primary w-full" type="button">登录</button>
-      <button id="registerBtn" class="btn btn-ghost w-full" type="button">注册新账户</button>
-      <p class="text-[11px] text-slate-400 leading-relaxed pt-1">
-        账户与数据只保存在你自己的浏览器里。清除浏览器数据会丢失记录，建议定期在「设置」中导出备份。
-      </p >
-    </div>
-  </div>
-</div>
-
-<!-- ========== 应用页 ========== -->
-<div id="appView" class="hidden min-h-screen">
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
-    <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-      <button class="font-semibold tracking-tight" data-act="home" type="button">LifeLog</button>
-      <div class="flex items-center gap-3 text-sm">
-        <span id="userLabel" class="text-slate-400"></span>
-        <button class="text-slate-500 hover:text-slate-900" data-act="settings" type="button">设置</button>
-        <button class="text-slate-500 hover:text-slate-900" data-act="logout" type="button">退出</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-2xl mx-auto px-4 py-5 pb-24 space-y-4">
-    <section id="composer" class="card p-4">
-      <textarea id="quickInput" rows="2" class="inp resize-none"
-        placeholder="一句话：今天午饭牛肉面25，晚上跑步5公里，睡了7个半小时"></textarea>
-      <div class="flex items-center justify-between mt-3 gap-2 flex-wrap">
-        <span class="text-[11px] text-slate-400">⌘/Ctrl + Enter 解析</span>
-        <div class="flex gap-2 shrink-0">
-          <button class="btn btn-ghost" data-act="clear-quick" type="button">清空</button>
-          <button id="parseBtn" class="btn btn-primary" data-act="parse" type="button">AI 解析</button>
-        </div>
-      </div>
-      <div id="draftArea" class="mt-4"></div>
-    </section>
-    <div id="view"></div>
-  </main>
-</div>
+<div id="errBar" style="display:none;background:#fee2e2;color:#b91c1c;font-size:12px;padding:8px;text-align:center"></div>
+<div id="root"></div>
 
 <script>
-/* =========================================================
-   1. 工具
-   ========================================================= */
-const $  = (s, r = document) => r.querySelector(s);
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const num = v => { if (v === '' || v === null || v === undefined) return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
-const pad = n => String(n).padStart(2, '0');
+window.onerror = function(msg, src, line) {
+  var el = document.getElementById('errBar');
+  if (el) { el.style.display = 'block'; el.textContent = '页面错误: ' + msg + ' (第 ' + line + ' 行)'; }
+};
 
-const LS = {
-  read(k, de
+/* ---------- 存储 ---------- */
+function LSread(k, def) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
+function LSwrite(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { alert('存储失败'); } }
+
+/* ---------- 工具 ---------- */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s) {
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function hashStr(s) { var h=0; for (var i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))|0; return 'h'+(h>>>0).toString(36); }
+function pad(n) { return n<10?'0'+n:''+n; }
+function fmtTime(iso) { var d=new Date(iso); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function dayKey(iso) { var d=new Date(iso); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function fmtDay(k) {
+  var today = dayKey(new Date().toISOString());
+  var yest = dayKey(new Date(Date.now()-86400000).toISOString());
+  if (k===today) return '今天';
+  if (k===yest) return '昨天';
+  var p = k.split('-');
+  return parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日';
+}
+function toLocalInput(iso) { var d=new Date(iso); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function fromLocalInput(v) { var d=new Date(v); return isNaN(d)?new Date().toISOString():d.toISOString(); }
+function fmtNum(n) { if (n===''||n==null) return ''; var x=Number(n); if (!isFinite(x)) return ''; return String(Math.round(x*100)/100); }
+
+/* ---------- 状态 ---------- */
+var DEF_SET = { apiBase:'https://api.deepseek.com/v1', apiKey:'', model:'deepseek-chat', jsonMode:true };
+var USERS_KEY = 'lifelog_users', SESS_KEY = 'lifelog_session';
+var state = {
+  user: null,
+  data: { events: [], records: [], settings: Object.assign({}, DEF_SET) },
+  view: 'auth', current: null, draft: []
+};
+var flash = '';
+function userDataKey(id) { return 'lifelog_data_' + id; }
+function saveData() { if (state.user) LSwrite(userDataKey(state.user.id), state.data); }
+
+/* ---------- 认证 ---------- */
+function doRegister() {
+  var u = (document.getElementById('aUser').value||'').trim();
+  var p = document.getElementById('aPass').value||'';
+  if (u.length < 2) { flash='用户名至少 2 个字'; render(); return; }
+  if (p.length < 4) { flash='密码至少 4 个字'; render(); return; }
+  var users = LSread(USERS_KEY, []);
+  if (users.some(function(x){return x.username===u;})) { flash='用户名已存在'; render(); return; }
+  var user = { id:uid(), username:u, pass:hashStr(p), createdAt:new Date().toISOString() };
+  users.push(user); LSwrite(USERS_KEY, users);
+  enterUser(user);
+}
+function doLogin() {
+  var u = (document.getElementById('aUser').value||'').trim();
+  var p = document.getElementById('aPass').value||'';
+  var users = LSread(USERS_KEY, []);
+  var user = users.filter(function(x){return x.username===u;})[0];
+  if (!user) { flash='用户不存在'; render(); return; }
+  if (user.pass !== hashStr(p)) { flash='密码错误'; render(); return; }
+  enterUser(user);
+}
+function enterUser(user) {
+  state.user = user;
+  LSwrite(SESS_KEY, user.id);
+  var raw = LSread(userDataKey(user.id), null) || {};
+  state.data = {
+    events: Array.isArray(raw.events) ? raw.events : [],
+    records: Array.isArray(raw.records) ? raw.records : [],
+    settings: Object.assign({}, DEF_SET, raw.settings || {})
+  };
+  state.view='home'; state.current=null; state.draft=[]; flash='';
+  render();
+}
+function doLogout() {
+  LSwrite(SESS_KEY, null);
+  state.user=null; state.view='auth'; state.draft=[]; flash='';
+  render();
+}
+
+/* ---------- 事项 ---------- */
+function findEvent(name) {
+  var k = String(name||'').trim().toLowerCase();
+  if (!k) return null;
+  for (var i=0;i<state.data.events.length;i++) if (state.data.events[i].name.trim().toLowerCase()===k) return state.data.events[i];
+  return null;
+}
+function getEvent(id) {
+  for (var i=0;i<state.data.events.length;i++) if (state.data.events[i].id===id) return state.data.events[i];
+  return null;
+}
+function ensureEvent(name, icon) {
+  var n = String(name||'').trim();
+  if (!n) return null;
+  var e = findEvent(n);
+  if (!e) {
+    e = { id:uid(), name:n, icon:icon||'📌', showAmount:true, showContent:true, createdAt:new Date().toISOString() };
+    state.data.events.push(e);
+  } else if (icon && (!e.icon || e.icon==='📌')) { e.icon = icon; }
+  return e;
+}
+function recordsOf(eid) { return state.data.records.filter(function(r){return r.eventId===eid;}); }
+function latestAt(eid) {
+  var rs = recordsOf(eid);
+  if (!rs.length) return null;
+  var latest = rs[0].at;
+  for (var i=1;i<rs.length;i++) if (new Date(rs[i].at) > new Date(latest)) latest = rs[i].at;
+  return latest;
+}
+function sortedEvents() {
+  var list = state.data.events.slice();
+  list.sort(function(a,b){
+    var ra=latestAt(a.id), rb=latestAt(b.id);
+    if (ra && rb) return new Date(rb)-new Date(ra);
+    if (ra) return -1;
+    if (rb) return 1;
+    return new Date(b.createdAt)-new Date(a.createdAt);
+  });
+  return list;
+}
+function recordText(rec, ev) {
+  var parts=[];
+  if (ev.showAmount && rec.amount!==null && rec.amount!==undefined && rec.amount!=='') parts.push(fmtNum(rec.amount)+(rec.unit||''));
+  if (ev.showContent && rec.content) parts.push(rec.content);
+  return parts.join(' · ');
+}
+function eventTotal(ev) {
+  var rs = recordsOf(ev.id).filter(function(r){return r.amount!==null && r.amount!==undefined && r.amount!=='';});
+  if (!rs.length || !ev.showAmount) return '';
+  var units={}; rs.forEach(function(r){units[r.unit||'']=1;});
+  var keys=Object.keys(units); if (keys.length>1) return '';
+  var sum=0; rs.forEach(function(r){sum += Number(r.amount)||0;});
+  return fmtNum(sum) + (keys[0]||'');
+}
+
+/* ---------- AI 解析 ---------- */
+function buildPrompt() {
+  var now = new Date().toISOString();
+  var existing = state.data.events.map(function(e){return e.name;});
+  return '你是生活记录解析助手。用户用一句话描述若干件事，请拆成一条条记录。\n'
+    + (existing.length ? '用户已有事项（优先复用名字）：' + existing.join('、') + '\n' : '用户还没有任何事项。\n')
+    + '\n只输出 JSON，不要 markdown，不要解释：\n'
+    + '{"records":[{"event":"事项名，简短中文","icon":"一个 emoji","at":"ISO8601 时间","amount":数字或null,"unit":"单位如 元/公里/小时/杯/页，没有则空串","content":"内容描述，没有则空串"}]}\n\n'
+    + '规则：\n'
+    + '1. 一句话可能包含多件事，必须拆多条。如"午饭25，跑步5公里"拆成两条。\n'
+    + '2. event 用简短通用的名字，优先复用已有事项名。\n'
+    + '3. amount 只填数字，不带单位。没有数量填 null。\n'
+    + '4. content 是文字描述，没有填空字符串。数值和内容可以同时有。\n'
+    + '5. 时间："昨天""今天早上""刚才"要换算成绝对时间；没说用当前时间 ' + now + '。\n'
+    + '6. 只输出 JSON。';
+}
+function extractJSON(text) {
+  var s = String(text||'').trim();
+  s = s.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  var i = s.indexOf('{'), j = s.lastIndexOf('}');
+  if (i>=0 && j>i) s = s.slice(i, j+1);
+  return s;
+}
+function handleParse() {
+  var text = (document.getElementById('quickInput').value||'').trim();
+  if (!text) { alert('请先输入一句话'); return; }
+  var btn = document.getElementById('parseBtn');
+  if (btn) { btn.disabled=true; btn.textContent='解析中...'; }
+  var s = state.data.settings;
+  if (!s.apiKey) { if (btn){btn.disabled=false;btn.textContent='AI 解析';} alert('请先在「设置」里填写 API Key'); return; }
+  var base = (s.apiBase||'').replace(/\/+$/, '');
+  var body = { model:s.model, messages:[{role:'system',content:buildPrompt()},{role:'user',content:text}], temperature:0.1 };
+  if (s.jsonMode) body.response_format = { type:'json_object' };
+  fetch(base + '/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + s.apiKey },
+    body: JSON.stringify(body)
+  }).then(function(res){
+    if (!res.ok) return res.text().then(function(t){ throw new Error('接口 '+res.status+'：'+t.slice(0,200)); });
+    return res.json();
+  }).then(function(json){
+    var content = (json && json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
+    var parsed = JSON.parse(extractJSON(content));
+    var records = Array.isArray(parsed.records) ? parsed.records : [];
+    if (!records.length) { alert('没解析出记录，换个说法试试'); return; }
+    state.draft = records.map(function(r){
+      var name = String(r.event||'').trim() || '未命名事项';
+      return {
+        id:uid(), eventName:name, icon:r.icon||'📌',
+        at:r.at || new Date().toISOString(),
+        amount:(r.amount===null||r.amount===undefined)?'':r.amount,
+        unit:r.unit||'', content:r.content||'',
+        isNew: !findEvent(name)
+      };
+    });
+    renderDraft();
+  }).catch(function(err){
+    alert('解析失败：' + err.message);
+  }).then(function(){
+    if (btn) { btn.disabled=false; btn.textContent='AI 解析'; }
+  });
+}
+function renderDraft() {
+  var box = document.getElementById('draftArea');
+  if (!box) return;
+  if (!state.draft.length) { box.innerHTML=''; return; }
+  var hasNew = state.draft.some(function(d){return d.isNew;});
+  var html = '<div class="border-t border-slate-100 pt-3 space-y-3">';
+  html += '<div class="flex items-center justify-between">';
+  html += '<div class="text-sm font-medium">解析结果 <span class="text-slate-400 font-normal">共 '+state.draft.length+' 条</span>';
+  if (hasNew) html += ' <span class="ml-2 text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700">含新事项</span>';
+  html += '</div><div class="flex gap-2">';
+  html += '<button class="btn btn-ghost" data-act="draft-cancel">取消</button>';
+  html += '<button class="btn btn-primary" data-act="draft-save">全部入账</button>';
+  html += '</div></div>';
+  for (var i=0;i<state.draft.length;i++) {
+    var d = state.draft[i];
+    html += '<div style="border:1px solid '+(d.isNew?'#f59e0b':'#e2e8f0')+';border-radius:12px;padding:12px;background:'+(d.isNew?'#fffbeb':'#fff')+'">';
+    html += '<div class="flex items-center justify-between gap-2">';
+    html += '<div class="flex items-center gap-2 flex-1">';
+    html += '<input class="inp" style="width:56px;text-align:center" data-draft="'+i+'" data-field="icon" value="'+esc(d.icon)+'">';
+    html += '<input class="inp" data-draft="'+i+'" data-field="eventName" value="'+esc(d.eventName)+'">';
+    html += '</div>';
+    html += '<button style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer" data-act="draft-del" data-idx="'+i+'">×</button>';
+    html += '</div>';
+    if (d.isNew) html += '<div class="text-xs text-amber-700 mt-1">将新建事项</div>';
+    html += '<div class="grid grid-cols-2 gap-2 mt-2">';
+    html += '<label class="block"><span class="text-xs text-slate-500">时间</span><input class="inp mt-1" type="datetime-local" data-draft="'+i+'" data-field="at" value="'+toLocalInput(d.at)+'"></label>';
+    html += '<div class="grid grid-cols-2 gap-2">';
+    html += '<label class="block"><span class="text-xs text-slate-500">数值</span><input class="inp mt-1" type="number" step="any" data-draft="'+i+'" data-field="amount" value="'+esc(d.amount)+'"></label>';
+    html += '<label class="block"><span class="text-xs text-slate-500">单位</span><input class="inp mt-1" data-draft="'+i+'" data-field="unit" value="'+esc(d.unit)+'"></label>';
+    html += '</div></div>';
+    html += '<label class="block mt-2"><span class="text-xs text-slate-500">内容</span><input class="inp mt-1" data-draft="'+i+'" data-field="content" value="'+esc(d.content)+'"></label>';
+    html += '</div>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+function draftSave() {
+  var added=0, created=0;
+  state.draft.forEach(function(d){
+    var name = (d.eventName||'').trim();
+    if (!name) return;
+    var amount = (d.amount===''||d.amount==null) ? null : Number(d.amount);
+    if (amount!==null && !isFinite(amount)) amount = null;
+    var content = String(d.content||'').trim();
+    if (amount===null && !content) return;
+    var isNew = !findEvent(name);
+    var ev = ensureEvent(name, d.icon);
+    if (!ev) return;
+    if (isNew) created++;
+    state.data.records.push({
+      id:uid(), eventId:ev.id, at:d.at || new Date().toISOString(),
+      amount:amount, unit:String(d.unit||'').trim(), content:content,
+      createdAt:new Date().toISOString()
+    });
+    added++;
+  });
+  saveData();
+  state.draft = [];
+  var qi = document.getElementById('quickInput'); if (qi) qi.value='';
+  state.view='home';
+  flash = added ? ('已入账 '+added+' 条' + (created?'，新建 '+created+' 个事项':'')) : '';
+  render();
+}
+
+/* ---------- 渲染 ---------- */
+function render() {
+  var root = document.getElementById('root');
+  if (!state.user) root.innerHTML = renderAuth();
+  else root.innerHTML = renderShell();
+}
+function renderAuth() {
+  return '<div class="min-h-screen flex items-center justify-center p-4"><div class="w-full max-w-sm">'
+    + '<div class="text-center mb-6"><div class="text-3xl font-semibold">LifeLog</div><div class="text-sm text-slate-500 mt-1">一句话，记一件事</div></div>'
+    + '<div class="card p-6 space-y-3">'
+    + '<input id="aUser" class="inp" placeholder="用户名">'
+    + '<input id="aPass" class="inp" type="password" placeholder="密码">'
+    + (flash ? '<div class="text-xs text-rose-600">'+esc(flash)+'</div>' : '')
+    + '<button class="btn btn-primary w-full" data-act="login">登录</button>'
+    + '<button class="btn btn-ghost w-full" data-act="register">注册新账户</button>'
+    + '<p class="text-xs text-slate-400 leading-relaxed pt-1">账户与数据只保存在你自己的浏览器里。清除浏览器数据会丢失记录。</p>'
+    + '</div></div></div>';
+}
+function renderShell() {
+  var body = state.view==='home' ? renderHome() : state.view==='event' ? renderEvent() : state.view==='settings' ? renderSettings() : '';
+  return '<header class="bg-white border-b border-slate-200 sticky top-0 z-20"><div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">'
+    + '<button style="background:none;border:none;font-weight:600;cursor:pointer" data-act="home">LifeLog</button>'
+    + '<div class="flex items-center gap-3 text-sm"><span class="text-slate-400">'+esc(state.user.username)+'</span>'
+    + '<button style="background:none;border:none;color:#64748b;cursor:pointer" data-act="settings">设置</button>'
+    + '<button style="background:none;border:none;color:#64748b;cursor:pointer" data-act="logout">退出</button>'
+    + '</div></div></header>'
+    + '<main class="max-w-2xl mx-auto px-4 py-5 pb-24 space-y-4">'
+    + (state.view==='home'
+       ? '<section class="card p-4"><textarea id="quickInput" rows="2" class="inp resize-none" placeholder="一句话：今天午饭牛肉面25，晚上跑步5公里，睡了7个半小时"></textarea>'
+         + '<div class="flex items-center justify-between mt-3 gap-2 flex-wrap"><span class="text-xs text-slate-400">Ctrl + Enter 解析</span>'
+         + '<div class="flex gap-2"><button class="btn btn-ghost" data-act="clear-quick">清空</button><button id="parseBtn" class="btn btn-primary" data-act="parse">AI 解析</button></div></div>'
+         + '<div id="draftArea" class="mt-4"></div></section>'
+       : '')
+    + (flash ? '<div class="card p-3 text-sm text-emerald-700" style="background:#ecfdf5">'+esc(flash)+'</div>' : '')
+    + '<div id="view">' + body + '</div></main>';
+}
+function renderHome() {
+  var events = sortedEvents();
+  if (!events.length) return '<div class="card p-10 text-center text-sm text-slate-400">还没有任何事项。在上面写一句话，比如「午饭牛肉面25」，开始记录。</div>';
+  var html = '<div class="space-y-3"><div class="text-sm font-medium text-slate-500">我的事项</div><div class="grid grid-cols-2 sm:grid-cols-3 gap-3">';
+  events.forEach(function(e){
+    var count = recordsOf(e.id).length;
+    var total = eventTotal(e);
+    html += '<button class="evt" data-act="open-event" data-id="'+esc(e.id)+'">';
+    html += '<div class="flex items-center justify-between"><span style="font-size:18px">'+esc(e.icon||'📌')+'</span><span class="text-xs text-slate-400">'+count+' 条</span></div>';
+    html += '<div class="mt-1 font-medium text-sm truncate">'+esc(e.name)+'</div>';
+    html += '<div class="text-xs text-slate-400 mt-0.5 truncate">'+(total?'累计 '+esc(total):'&nbsp;')+'</div></button>';
+  });
+  return html + '</div></div>';
+}
+function renderEvent() {
+  var ev = getEvent(state.current);
+  if (!ev) { state.view='home'; return renderHome(); }
+  var recs = recordsOf(ev.id).slice().sort(function(a,b){return new Date(b.at)-new Date(a.at);});
+  var html = '<div class="space-y-4">';
+  html += '<div class="flex items-center gap-2"><button class="btn btn-ghost" data-act="home">← 返回</button><div class="text-lg font-medium truncate">'+esc(ev.icon||'📌')+' '+esc(ev.name)+'</div></div>';
+  html += '<div class="flex items-center gap-2 text-xs"><span class="text-slate-400">显示：</span>';
+  html += '<button class="pill '+(ev.showAmount?'on':'')+'" data-act="toggle-amount">数量</button>';
+  html += '<button class="pill '+(ev.showContent?'on':'')+'" data-act="toggle-content">内容</button>';
+  html += '<button style="background:none;border:none;color:#cbd5e1;cursor:pointer;margin-left:auto" data-act="del-event">删除事项</button></div>';
+  html += '<div class="card p-4 space-y-2"><div class="text-sm font-medium">添加一条</div>';
+  html += '<div class="grid grid-cols-2 gap-2">';
+  html += '<label class="block"><span class="text-xs text-slate-500">时间</span><input id="addAt" class="inp mt-1" type="datetime-local" value="'+toLocalInput(new Date().toISOString())+'"></label>';
+  html += '<div class="grid grid-cols-2 gap-2">';
+  html += '<label class="block"><span class="text-xs text-slate-500">数值</span><input id="addAmount" class="inp mt-1" type="number" step="any"></label>';
+  html += '<label class="block"><span class="text-xs text-slate-500">单位</span><input id="addUnit" class="inp mt-1" placeholder="'+esc((recs.filter(function(r){return r.unit;})[0]||{}).unit||'')+'"></label>';
+  html += '</div></div>';
+  html += '<label class="block"><span class="text-xs text-slate-500">内容</span><input id="addContent" class="inp mt-1"></label>';
+  html += '<button class="btn btn-primary" data-act="add-record">保存</button></div>';
+  if (!recs.length) { html += '<div class="card p-8 text-center text-sm text-slate-400">这个事项还没有记录</div>'; }
+  else {
+    var groups={}, order=[];
+    recs.forEach(function(r){ var k=dayKey(r.at); if (!groups[k]) { groups[k]=[]; order.push(k); } groups[k].push(r); });
+    order.forEach(function(k){
+      html += '<div><div class="text-xs text-slate-400 mb-1 px-1">'+fmtDay(k)+'</div><div class="card px-4 py-1">';
+      groups[k].forEach(function(r){
+        var txt = recordText(r, ev);
+        html += '<div class="flex items-start gap-3 py-2 border-b border-slate-100">';
+        html += '<div class="text-xs text-slate-400 w-10 shrink-0 pt-0.5">'+fmtTime(r.at)+'</div>';
+        html += '<div class="flex-1 text-sm break-words'+(txt?'':' text-slate-300')+'">'+(txt?esc(txt):'（无可见内容）')+'</div>';
+        html += '<button style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:12px" data-act="del-record" data-id="'+esc(r.id)+'">删除</button></div>';
+      });
+      html += '</div></div>';
+    });
+  }
+  return html + '</div>';
+}
+function renderSettings() {
+  var s = state.data.settings;
+  var html = '<div class="space-y-4"><div class="card p-4 space-y-3"><div class="text-sm font-medium">AI 解析配置</div>';
+  html += '<label class="block"><span class="text-xs text-slate-500">API Base</span><input class="inp mt-1" data-set="apiBase" value="'+esc(s.apiBase)+'" placeholder="https://api.deepseek.com/v1"></label>';
+  html += '<label class="block"><span class="text-xs text-slate-500">API Key</span><input class="inp mt-1" type="password" data-set="apiKey" value="'+esc(s.apiKey)+'" placeholder="sk-..."></label>';
+  html += '<label class="block"><span class="text-xs text-slate-500">模型名称</span><input class="inp mt-1" data-set="model" value="'+esc(s.model)+'" placeholder="deepseek-chat"></label>';
+  html += '<label class="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" data-set="jsonMode" '+(s.jsonMode?'checked':'')+'> 启用 JSON 输出模式</label>';
+  html += '<p class="text-xs text-slate-400 leading-relaxed">支持 DeepSeek、通义、智谱、Kimi、OpenAI 等 OpenAI 兼容接口。</p></div>';
+  html += '<div class="card p-4 space-y-3"><div class="text-sm font-medium">数据</div><div class="flex flex-wrap gap-2">';
+  html += '<button class="btn btn-ghost" data-act="export">导出 JSON</button>';
+  html += '<button class="btn btn-ghost" data-act="import">导入 JSON</button>';
+  html += '<button class="btn btn-danger" data-act="wipe">清空所有记录</button></div>';
+  html += '<input type="file" id="importFile" accept=".json" style="display:none"></div></div>';
+  return html;
+}
+
+/* ---------- 事件委托 ---------- */
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-act]');
+  if (!t) return;
+  var act = t.getAttribute('data-act');
+  var id = t.getAttribute('data-id');
+  var idx = t.getAttribute('data-idx');
+
+  if (act==='login') { doLogin(); return; }
+  if (act==='register') { doRegister(); return; }
+  if (act==='logout') { doLogout(); return; }
+  if (act==='home') { state.view='home'; state.current=null; flash=''; render(); return; }
+  if (act==='settings') { state.view='settings'; flash=''; render(); return; }
+  if (act==='parse') { handleParse(); return; }
+  if (act==='clear-quick') { document.getElementById('quickInput').value=''; return; }
+  if (act==='draft-cancel') { state.draft=[]; renderDraft(); return; }
+  if (act==='draft-save') { draftSave(); return; }
+  if (act==='draft-del') { state.draft.splice(parseInt(idx,10),1); renderDraft(); return; }
+  if (act==='open-event') { state.current=id; state.view='event'; flash=''; render(); return; }
+  if (act==='toggle-amount') { var a=getEvent(state.current); if (a){ a.showAmount=!a.showAmount; saveData(); render(); } return; }
+  if (act==='toggle-content') { var b=getEvent(state.current); if (b){ b.showContent=!b.showContent; saveData(); render(); } return; }
+  if (act==='add-record') {
+    var ev = getEvent(state.current); if (!ev) return;
+    var at = fromLocalInput(document.getElementById('addAt').value);
+    var amountStr = document.getElementById('addAmount').value;
+    var unit = document.getElementById('addUnit').value.trim();
+    var content = document.getElementById('addContent').value.trim();
+    var amt = (amountStr==='') ? null : Number(amountStr);
+    if (amt!==null && !isFinite(amt)) amt=null;
+    if (amt===null && !content) { alert('请至少填数值或内容'); return; }
+    state.data.records.push({ id:uid(), eventId:ev.id, at:at, amount:amt, unit:unit, content:content, createdAt:new Date().toISOString() });
+    saveData(); render(); return;
+  }
+  if (act==='del-record') {
+    if (!confirm('删除这条记录？')) return;
+    state.data.records = state.data.records.filter(function(r){return r.id!==id;});
+    saveData(); render(); return;
+  }
+  if (act==='del-event') {
+    var ev2 = getEvent(state.current); if (!ev2) return;
+    var n = recordsOf(ev2.id).length;
+    if (!confirm('删除事项「'+ev2.name+'」？'+(n?'其中 '+n+' 条记录也会被删除。':''))) return;
+    state.data.records = state.data.records.filter(function(r){return r.eventId!==ev2.id;});
+    state.data.events = state.data.events.filter(function(x){return x.id!==ev2.id;});
+    saveData(); state.view='home'; state.current=null; flash=''; render(); return;
+  }
+  if (act==='export') {
+    var blob = new Blob([JSON.stringify(state.data,null,2)], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'lifelog-'+state.user.username+'-'+dayKey(new Date().toISOString())+'.json';
+    a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);}, 2000); return;
+  }
+  if (act==='import') { document.getElementById('importFile').click(); return; }
+  if (act==='wipe') {
+    if (!confirm('确定清空所有事项和记录？此操作不可撤销。')) return;
+    state.data.events=[]; state.data.records=[];
+    saveData(); state.view='home'; state.current=null; flash=''; render(); return;
+  }
+});
+
+/* ---------- 输入 ---------- */
+document.addEventListener('input', function(e){
+  var t = e.target;
+  var sk = t.getAttribute && t.getAttribute('data-set');
+  if (sk) { state.data.settings[sk] = (t.type==='checkbox') ? t.checked : t.value; saveData(); return; }
+  var di = t.getAttribute && t.getAttribute('data-draft');
+  if (di !== null && di !== undefined && di !== '') {
+    var d = state.draft[parseInt(di,10)];
+    if (!d) return;
+    var f = t.getAttribute('data-field');
+    if (f==='at') d.at = fromLocalInput(t.value);
+    else if (f==='amount') d.amount = t.value;
+    else if (f) d[f] = t.value;
+    if (f==='eventName') d.isNew = !findEvent(d.eventName);
+  }
+});
+
+/* ---------- 文件导入 ---------- */
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if (t.id !== 'importFile') return;
+  var f = t.files && t.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var obj = JSON.parse(reader.result);
+      if (obj.events) state.data.events = obj.events;
+      if (obj.records) state.data.records = obj.records;
+      if (obj.settings) state.data.settings = Object.assign({}, DEF_SET, obj.settings);
+      saveData(); state.view='home'; state.current=null; flash='导入成功'; render();
+    } catch(err) { alert('导入失败：' + err.message); }
+  };
+  reader.readAsText(f);
+  t.value='';
+});
+
+/* ---------- 快捷键 ---------- */
+document.addEventListener('keydown', function(e){
+  if ((e.ctrlKey||e.metaKey) && e.key==='Enter') {
+    if (document.activeElement && document.activeElement.id==='quickInput') { e.preventDefault(); handleParse(); }
+  }
+  if (e.key==='Enter' && !state.user) {
+    var a = document.activeElement;
+    if (a && (a.id==='aUser' || a.id==='aPass')) { e.preventDefault(); doLogin(); }
+  }
+});
+
+/* ---------- 启动 ---------- */
+(function init(){
+  try {
+    var sid = LSread(SESS_KEY, null);
+    var users = LSread(USERS_KEY, []);
+    var user = sid ? users.filter(function(x){return x.id===sid;})[0] : null;
+    if (user) enterUser(user); else { state.view='auth'; render(); }
+  } catch(err) {
+    console.error(err);
+    document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;color:#b91c1c">启动失败：'+esc(err.message)+'</div>';
+  }
+})();
+</script>
+</body>
+</html>
