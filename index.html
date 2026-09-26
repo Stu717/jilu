@@ -73,21 +73,24 @@ function saveData() { if (state.user) LSwrite(userDataKey(state.user.id), state.
 function doRegister() {
   var u = (document.getElementById('aUser').value||'').trim();
   var p = document.getElementById('aPass').value||'';
-  if (u.length < 2) { flash='用户名至少 2 个字'; render(); return; }
-  if (p.length < 4) { flash='密码至少 4 个字'; render(); return; }
+  if (u.length < 2) { alert('注册失败：用户名至少 2 个字'); return; }
+  if (p.length < 4) { alert('注册失败：密码至少 4 个字'); return; }
   var users = LSread(USERS_KEY, []);
-  if (users.some(function(x){return x.username===u;})) { flash='用户名已存在'; render(); return; }
+  if (users.some(function(x){return x.username===u;})) { alert('注册失败：用户名已存在，请直接登录'); return; }
   var user = { id:uid(), username:u, pass:hashStr(p), createdAt:new Date().toISOString() };
   users.push(user); LSwrite(USERS_KEY, users);
+  alert('注册成功！正在进入...');
   enterUser(user);
 }
 function doLogin() {
   var u = (document.getElementById('aUser').value||'').trim();
   var p = document.getElementById('aPass').value||'';
+  if (!u || !p) { alert('请输入用户名和密码'); return; }
   var users = LSread(USERS_KEY, []);
   var user = users.filter(function(x){return x.username===u;})[0];
-  if (!user) { flash='用户不存在'; render(); return; }
-  if (user.pass !== hashStr(p)) { flash='密码错误'; render(); return; }
+  if (!user) { alert('登录失败：用户不存在，请先点“注册新账户”'); return; }
+  if (user.pass !== hashStr(p)) { alert('登录失败：密码错误'); return; }
+  alert('登录成功！');
   enterUser(user);
 }
 function enterUser(user) {
