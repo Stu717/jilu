@@ -87,4 +87,626 @@ function defaultTemplates() {
     { id: uid(), name: '晚饭', icon: '🍜', unit: '元', amountEnabled: true, defaultAmount: '', contentEnabled: true, contentHint: '吃了什么', sortOrder: 1 },
     { id: uid(), name: '运动', icon: '🏃', unit: '公里', amountEnabled: true, defaultAmount: '', contentEnabled: true, contentHint: '做了什么运动', sortOrder: 2 },
     { id: uid(), name: '睡眠', icon: '😴', unit: '小时', amountEnabled: true, defaultAmount: '', contentEnabled: true, contentHint: '睡眠质量', sortOrder: 3 },
-    { id: uid(), name: '阅读', icon: '📖', unit
+    { id: uid(), name: '阅读', icon: '📖', unit: '页', amountEnabled: true, defaultAmount: '', contentEnabled: true, contentHint: '书名', sortOrder: 4 },
+    { id: uid(), name: '随手记', icon: '📝', unit: '', amountEnabled: false, defaultAmount: '', contentEnabled: true, contentHint: '想记什么', sortOrder: 5 }
+  ];
+}
+
+/* =========================================================
+   2. 全局状态
+   ========================================================= */
+const USERS_KEY = 'lifelog_users';
+const SESS_KEY = 'lifelog_session';
+const dataKey = userId => 'lifelog_data_' + userId;
+
+const state = {
+  user: null,
+  data: { templates: [], records: [] },
+  view: 'auth',           // auth | home | settings
+  recordModal: null,      // { template, record? } 弹窗状态
+  templateModal: null,    // { template? } 模板编辑弹窗
+  flash: ''
+};
+
+function save() { if (state.user) LSwrite(dataKey(state.user.id), state.data); }
+function getTemplate(id) { return state.data.templates.find(t => t.id === id) || null; }
+function templatesSorted() {
+  return state.data.templates.slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+}
+function recordsSorted() {
+  return state.data.records.slice().sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+/* =========================================================
+   3. 认证
+   ========================================================= */
+function enterUser(user) {
+  state.user = user;
+  LSwrite(SESS_KEY, user.id);
+  const raw = LSread(dataKey(user.id), null) || {};
+  state.data = {
+    templates: Array.isArray(raw.templates) && raw.templates.length ? raw.templates : defaultTemplates(),
+    records: Array.isArray(raw.records) ? raw.records : []
+  };
+  state.view = 'home';
+  state.flash = '';
+  render();
+}
+
+function doRegister() {
+  const u = ($('#authUser')?.value || '').trim();
+  const p = $('#authPass')?.value || '';
+  if (u.length < 2) return alert('注册失败：用户名至少 2 个字');
+  if (p.length < 4) return alert('注册失败：密码至少 4 个字');
+  const users = LSread(USERS_KEY, []);
+  if (users.some(x => x.username === u)) return alert('注册失败：用户名已存在，请直接登录');
+  const user = { id: uid(), username: u, pass: hashStr(p), createdAt: new Date().toISOString() };
+  users.push(user);
+  LSwrite(USERS_KEY, users);
+  alert('注册成功！');
+  enterUser(user);
+}
+
+function doLogin() {
+  const u = ($('#authUser')?.value || '').trim();
+  const p = $('#authPass')?.value || '';
+  if (!u || !p) return alert('请输入用户名和密码');
+  const users = LSread(USERS_KEY, []);
+  const user = users.find(x => x.username === u);
+  if (!user) return alert('登录失败：用户不存在，请先点「注册新账户」');
+  if (user.pass !== hashStr(p)) return alert('登录失败：密码错误');
+  enterUser(user);
+}
+
+function doLogout() {
+  LSwrite(SESS_KEY, null);
+  state.user = null;
+  state.data = { templates: [], records: [] };
+  state.view = 'auth';
+  state.recordModal = null;
+  state.templateModal = null;
+  state.flash = '';
+  render();
+}
+
+/* =========================================================
+   4. 模板与记录操作
+   ========================================================= */
+function openRecordModal(templateId) {
+  const t = getTemplate(templateId);
+  if (!t) return;
+  state.recordModal = { template: t, record: null };
+  render();
+}
+
+function openEditRecord(recordId) {
+  const r = state.data.records.find(x => x.id === recordId);
+  if (!r) return;
+  const t = getTemplate(r.templateId);
+  if (!t) return;
+  state.recordModal = { template: t, record: r };
+  render();
+}
+
+function saveRecord() {
+  const m = state.recordModal;
+  if (!m) return;
+  const t = m.template;
+  const amountEl = $('#recAmount');
+  const contentEl = $('#recContent');
+  const atEl = $('#recAt');
+
+  const amount = amountEl && amountEl.value !== '' ? Number(amountEl.value) : null;
+  const content = contentEl ? contentEl.value.trim() : '';
+  const at = atEl ? fromLocalInput(atEl.value) : new Date().toISOString();
+
+  if (t.amountEnabled && amount === null && !content) return alert('请至少填写数值或内容');
+  if (!t.amountEnabled && !content) return alert('请填写内容');
+
+  if (m.record) {
+    // 编辑
+    const r = m.record;
+    r.amount = amount;
+    r.content = content;
+    r.at = at;
+  } else {
+    // 新增
+    state.data.records.push({
+      id: uid(),
+      templateId: t.id,
+      at,
+      amount,
+      content,
+      createdAt: new Date().toISOString()
+    });
+  }
+  save();
+  state.recordModal = null;
+  state.flash = m.record ? '已修改' : '已记录';
+  render();
+}
+
+function deleteRecord(id) {
+  if (!confirm('确定删除这条记录？')) return;
+  state.data.records = state.data.records.filter(r => r.id !== id);
+  save();
+  render();
+}
+
+function openTemplateModal(templateId) {
+  if (templateId) {
+    const t = getTemplate(templateId);
+    if (!t) return;
+    state.templateModal = { template: { ...t } };
+  } else {
+    // 新建模板
+    state.templateModal = {
+      template: {
+        id: null, name: '', icon: '📌', unit: '', amountEnabled: true, defaultAmount: '',
+        contentEnabled: true, contentHint: '', sortOrder: state.data.templates.length
+      }
+    };
+  }
+  render();
+}
+
+function saveTemplate() {
+  const m = state.templateModal;
+  if (!m) return;
+  const t = m.template;
+  const name = ($('#tplName')?.value || '').trim();
+  const icon = ($('#tplIcon')?.value || '').trim() || '📌';
+  const unit = ($('#tplUnit')?.value || '').trim();
+  const amountEnabled = $('#tplAmountEnabled')?.checked ?? true;
+  const defaultAmount = ($('#tplDefaultAmount')?.value || '').trim();
+  const contentEnabled = $('#tplContentEnabled')?.checked ?? true;
+  const contentHint = ($('#tplContentHint')?.value || '').trim();
+
+  if (!name) return alert('请填写模板名称');
+  if (!amountEnabled && !contentEnabled) return alert('至少启用数值或内容其中之一');
+
+  if (t.id) {
+    // 编辑现有
+    const existing = getTemplate(t.id);
+    if (!existing) return;
+    Object.assign(existing, { name, icon, unit, amountEnabled, defaultAmount, contentEnabled, contentHint });
+  } else {
+    // 新建
+    state.data.templates.push({
+      id: uid(), name, icon, unit, amountEnabled, defaultAmount, contentEnabled, contentHint,
+      sortOrder: state.data.templates.length
+    });
+  }
+  save();
+  state.templateModal = null;
+  state.flash = t.id ? '模板已更新' : '模板已创建';
+  render();
+}
+
+function deleteTemplate(id) {
+  const t = getTemplate(id);
+  if (!t) return;
+  const count = state.data.records.filter(r => r.templateId === id).length;
+  if (!confirm(`确定删除模板「${t.name}」？${count ? `其中 ${count} 条记录也会被删除。` : ''}`)) return;
+  state.data.records = state.data.records.filter(r => r.templateId !== id);
+  state.data.templates = state.data.templates.filter(x => x.id !== id);
+  save();
+  state.flash = '模板已删除';
+  render();
+}
+
+function moveTemplate(id, dir) {
+  const list = templatesSorted();
+  const idx = list.findIndex(t => t.id === id);
+  if (idx < 0) return;
+  const swap = dir === 'up' ? idx - 1 : idx + 1;
+  if (swap < 0 || swap >= list.length) return;
+  const a = list[idx], b = list[swap];
+  const tmp = a.sortOrder;
+  a.sortOrder = b.sortOrder;
+  b.sortOrder = tmp;
+  save();
+  render();
+}
+
+/* =========================================================
+   5. 渲染
+   ========================================================= */
+function render() {
+  const root = $('#root');
+  if (state.view === 'auth') {
+    root.innerHTML = renderAuth();
+  } else if (state.view === 'home') {
+    root.innerHTML = renderHome();
+  } else if (state.view === 'settings') {
+    root.innerHTML = renderSettings();
+  }
+  // 弹窗
+  const modalRoot = $('#modalRoot');
+  if (modalRoot) {
+    modalRoot.innerHTML = renderModals();
+  } else {
+    const div = document.createElement('div');
+    div.id = 'modalRoot';
+    div.innerHTML = renderModals();
+    document.body.appendChild(div);
+  }
+}
+
+function renderAuth() {
+  return `
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-6">
+        <div class="text-3xl font-semibold tracking-tight">LifeLog</div>
+        <div class="text-sm text-slate-500 mt-1">选一个词组，记一笔</div>
+      </div>
+      <div class="card p-6 space-y-3">
+        <input id="authUser" class="inp" placeholder="用户名" autocomplete="username">
+        <input id="authPass" class="inp" type="password" placeholder="密码" autocomplete="current-password">
+        <button class="btn btn-primary w-full" data-act="register">注册新账户</button>
+        <button class="btn btn-ghost w-full" data-act="login">登录</button>
+        <p class="text-[11px] text-slate-400 leading-relaxed pt-1">
+          账户与数据保存在浏览器本地。清除浏览器数据会丢失记录，建议在「设置」中导出备份。
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderHome() {
+  const templates = templatesSorted();
+  const records = recordsSorted();
+
+  // 按天分组
+  const groups = {};
+  const order = [];
+  records.forEach(r => {
+    const k = dayKey(r.at);
+    if (!groups[k]) { groups[k] = []; order.push(k); }
+    groups[k].push(r);
+  });
+
+  let html = `
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="font-semibold tracking-tight">LifeLog</div>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="text-slate-400">${esc(state.user.username)}</span>
+        <button class="text-slate-500 hover:text-slate-900" data-act="settings">设置</button>
+        <button class="text-slate-500 hover:text-slate-900" data-act="logout">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-5 pb-24 space-y-5">
+    ${state.flash ? `<div class="card p-3 text-sm text-emerald-700" style="background:#ecfdf5">${esc(state.flash)}</div>` : ''}
+
+    <section>
+      <div class="text-sm font-medium text-slate-500 mb-2">点击记录</div>
+      <div class="grid grid-cols-3 gap-3">
+        ${templates.map(t => `
+          <button class="tpl-card" data-act="open-record" data-id="${esc(t.id)}">
+            <div class="text-2xl">${esc(t.icon)}</div>
+            <div class="font-medium text-sm truncate w-full text-left">${esc(t.name)}</div>
+            ${t.unit ? `<div class="tag">${esc(t.unit)}</div>` : ''}
+          </button>
+        `).join('')}
+        <button class="tpl-card" data-act="new-template" style="align-items:center;justify-content:center;color:#94a3b8">
+          <div class="text-2xl">＋</div>
+          <div class="text-xs">新建模板</div>
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <div class="text-sm font-medium text-slate-500 mb-2">记录</div>
+      ${records.length ? order.map(k => `
+        <div class="mb-3">
+          <div class="text-xs text-slate-400 mb-1 px-1">${fmtDay(k)}</div>
+          <div class="card px-4 py-1">
+            ${groups[k].map(r => {
+              const t = getTemplate(r.templateId);
+              if (!t) return '';
+              const amountText = (r.amount !== null && r.amount !== undefined && r.amount !== '') ? `${fmtNum(r.amount)}${t.unit ? ' ' + t.unit : ''}` : '';
+              const contentText = r.content || '';
+              return `
+                <div class="record-item">
+                  <div class="text-xs text-slate-400 w-10 shrink-0 pt-0.5">${fmtTime(r.at)}</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-sm">${esc(t.icon)} ${esc(t.name)}</span>
+                      ${amountText ? `<span class="text-sm font-medium">${esc(amountText)}</span>` : ''}
+                    </div>
+                    ${contentText ? `<div class="text-xs text-slate-500 mt-0.5 break-words">${esc(contentText)}</div>` : ''}
+                  </div>
+                  <div class="flex gap-1 shrink-0">
+                    <button class="text-slate-300 hover:text-slate-600 text-xs px-1" data-act="edit-record" data-id="${esc(r.id)}">改</button>
+                    <button class="text-slate-300 hover:text-rose-500 text-xs px-1" data-act="del-record" data-id="${esc(r.id)}">删</button>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('') : '<div class="empty-hint">还没有记录。点击上面的卡片，开始记一笔。</div>'}
+    </section>
+  </main>`;
+  return html;
+}
+
+function renderSettings() {
+  const templates = templatesSorted();
+  let html = `
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <button class="text-slate-500 hover:text-slate-900" data-act="home">← 返回</button>
+        <div class="font-semibold">设置</div>
+      </div>
+      <button class="text-slate-500 hover:text-slate-900" data-act="logout">退出</button>
+    </div>
+  </header>
+  <main class="max-w-2xl mx-auto px-4 py-5 pb-24 space-y-5">
+    ${state.flash ? `<div class="card p-3 text-sm text-emerald-700" style="background:#ecfdf5">${esc(state.flash)}</div>` : ''}
+
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-sm font-medium">我的模板</div>
+        <button class="btn btn-ghost" data-act="new-template">+ 新建模板</button>
+      </div>
+      <div class="space-y-2">
+        ${templates.map(t => `
+          <div class="flex items-center gap-2 py-2 border-b border-slate-100 last:border-0">
+            <div class="text-xl">${esc(t.icon)}</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">${esc(t.name)}</div>
+              <div class="text-[11px] text-slate-400">
+                ${t.amountEnabled ? `数值${t.unit ? '(' + esc(t.unit) + ')' : ''}` : ''}
+                ${t.amountEnabled && t.contentEnabled ? ' · ' : ''}
+                ${t.contentEnabled ? '内容' : ''}
+              </div>
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button class="text-slate-400 hover:text-slate-700 text-xs px-1" data-act="move-up" data-id="${esc(t.id)}">↑</button>
+              <button class="text-slate-400 hover:text-slate-700 text-xs px-1" data-act="move-down" data-id="${esc(t.id)}">↓</button>
+              <button class="text-slate-400 hover:text-slate-700 text-xs px-1" data-act="edit-template" data-id="${esc(t.id)}">编辑</button>
+              <button class="text-slate-400 hover:text-rose-500 text-xs px-1" data-act="del-template" data-id="${esc(t.id)}">删除</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+
+    <section class="card p-4 space-y-3">
+      <div class="text-sm font-medium">数据备份</div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-ghost" data-act="export">导出 JSON</button>
+        <button class="btn btn-ghost" data-act="import">导入 JSON</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+      <p class="text-[11px] text-slate-400 leading-relaxed">
+        数据保存在浏览器本地。换设备或清除浏览器数据会丢失，建议定期导出备份。
+      </p>
+    </section>
+  </main>`;
+  return html;
+}
+
+function renderModals() {
+  let html = '';
+
+  // 记录弹窗
+  if (state.recordModal) {
+    const { template: t, record: r } = state.recordModal;
+    const isEdit = !!r;
+    const atVal = r ? toLocalInput(r.at) : toLocalInput(new Date().toISOString());
+    const amountVal = r && r.amount !== null && r.amount !== undefined ? r.amount : '';
+    const contentVal = r ? (r.content || '') : '';
+    html += `
+    <div class="modal-mask" data-act="close-modal">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-2xl">${esc(t.icon)}</span>
+          <div class="font-medium">${esc(t.name)}</div>
+          <div class="flex-1"></div>
+          <button class="text-slate-400 hover:text-slate-700 text-xl leading-none" data-act="close-modal">×</button>
+        </div>
+        <div class="space-y-3">
+          ${t.amountEnabled ? `
+            <label class="block">
+              <span class="text-xs text-slate-500">数值${t.unit ? '（' + esc(t.unit) + '）' : ''}</span>
+              <input id="recAmount" class="inp mt-1" type="number" step="any" value="${esc(amountVal)}" placeholder="${t.defaultAmount ? esc(t.defaultAmount) : ''}">
+            </label>` : ''}
+          ${t.contentEnabled ? `
+            <label class="block">
+              <span class="text-xs text-slate-500">内容</span>
+              <input id="recContent" class="inp mt-1" value="${esc(contentVal)}" placeholder="${esc(t.contentHint || '')}">
+            </label>` : ''}
+          <label class="block">
+            <span class="text-xs text-slate-500">时间</span>
+            <input id="recAt" class="inp mt-1" type="datetime-local" value="${esc(atVal)}">
+          </label>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button class="btn btn-ghost flex-1" data-act="close-modal">取消</button>
+          <button class="btn btn-primary flex-1" data-act="save-record">保存</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // 模板编辑弹窗
+  if (state.templateModal) {
+    const t = state.templateModal.template;
+    const isEdit = !!t.id;
+    html += `
+    <div class="modal-mask" data-act="close-modal">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <div class="font-medium">${isEdit ? '编辑模板' : '新建模板'}</div>
+          <button class="text-slate-400 hover:text-slate-700 text-xl leading-none" data-act="close-modal">×</button>
+        </div>
+        <div class="space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <label class="block col-span-2">
+              <span class="text-xs text-slate-500">名称</span>
+              <input id="tplName" class="inp mt-1" value="${esc(t.name)}" placeholder="如：午饭">
+            </label>
+            <label class="block">
+              <span class="text-xs text-slate-500">图标</span>
+              <input id="tplIcon" class="inp mt-1 text-center" value="${esc(t.icon)}" placeholder="🍚">
+            </label>
+          </div>
+          <label class="block">
+            <span class="text-xs text-slate-500">单位（可选）</span>
+            <input id="tplUnit" class="inp mt-1" value="${esc(t.unit)}" placeholder="如：元、公里、小时、页">
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" id="tplAmountEnabled" ${t.amountEnabled ? 'checked' : ''}>
+            记录数值（如金额、时长、距离）
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">默认数值（可选）</span>
+            <input id="tplDefaultAmount" class="inp mt-1" type="number" step="any" value="${esc(t.defaultAmount)}" placeholder="留空则不自动填">
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" id="tplContentEnabled" ${t.contentEnabled ? 'checked' : ''}>
+            记录内容（如吃了什么、做了什么）
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">内容提示（可选）</span>
+            <input id="tplContentHint" class="inp mt-1" value="${esc(t.contentHint)}" placeholder="如：吃了什么">
+          </label>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button class="btn btn-ghost flex-1" data-act="close-modal">取消</button>
+          <button class="btn btn-primary flex-1" data-act="save-template">保存</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+/* =========================================================
+   6. 事件委托
+   ========================================================= */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  const id = el.dataset.id;
+
+  switch (act) {
+    case 'register': doRegister(); break;
+    case 'login': doLogin(); break;
+    case 'logout': doLogout(); break;
+    case 'home': state.view = 'home'; state.flash = ''; render(); break;
+    case 'settings': state.view = 'settings'; state.flash = ''; render(); break;
+
+    case 'open-record': openRecordModal(id); break;
+    case 'edit-record': openEditRecord(id); break;
+    case 'del-record': deleteRecord(id); break;
+    case 'save-record': saveRecord(); break;
+
+    case 'new-template': openTemplateModal(null); break;
+    case 'edit-template': openTemplateModal(id); break;
+    case 'del-template': deleteTemplate(id); break;
+    case 'save-template': saveTemplate(); break;
+    case 'move-up': moveTemplate(id, 'up'); break;
+    case 'move-down': moveTemplate(id, 'down'); break;
+
+    case 'close-modal':
+      if (e.target.classList.contains('modal-mask') || el.classList.contains('modal-mask')) {
+        state.recordModal = null;
+        state.templateModal = null;
+        render();
+      } else if (el.tagName === 'BUTTON') {
+        state.recordModal = null;
+        state.templateModal = null;
+        render();
+      }
+      break;
+
+    case 'export': {
+      const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `lifelog-${state.user.username}-${dayKey(new Date().toISOString())}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      break;
+    }
+    case 'import': {
+      const f = $('#importFile');
+      if (f) f.click();
+      break;
+    }
+  }
+});
+
+/* 导入文件 */
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id !== 'importFile') return;
+  const f = t.files && t.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      if (obj && Array.isArray(obj.templates) && Array.isArray(obj.records)) {
+        state.data.templates = obj.templates;
+        state.data.records = obj.records;
+        save();
+        state.flash = '导入成功';
+        render();
+      } else {
+        alert('文件格式不正确');
+      }
+    } catch (err) {
+      alert('导入失败：' + err.message);
+    }
+  };
+  reader.readAsText(f);
+  t.value = '';
+});
+
+/* 回车快捷键 */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !state.user) {
+    const a = document.activeElement;
+    if (a && (a.id === 'authUser' || a.id === 'authPass')) {
+      e.preventDefault();
+      doLogin();
+    }
+  }
+  if (e.key === 'Escape') {
+    if (state.recordModal || state.templateModal) {
+      state.recordModal = null;
+      state.templateModal = null;
+      render();
+    }
+  }
+});
+
+/* =========================================================
+   7. 启动
+   ========================================================= */
+(function init() {
+  try {
+    const sid = LSread(SESS_KEY, null);
+    const users = LSread(USERS_KEY, []);
+    const user = sid ? users.find(x => x.id === sid) : null;
+    if (user) enterUser(user);
+    else { state.view = 'auth'; render(); }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('root').innerHTML =
+      '<div style="padding:40px;text-align:center;color:#b91c1c">启动失败：' + esc(err.message) + '</div>';
+  }
+})();
+</script>
+</body>
+</html>
