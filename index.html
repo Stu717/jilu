@@ -31,23 +31,55 @@
   .tag-badge{display:inline-block;font-size:11px;background:#0f172a;color:#fff;padding:1px 8px;border-radius:10px;margin-left:6px}
   .icon-preview{width:56px;height:56px;border-radius:10px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;flex-shrink:0}
   .icon-preview img{width:100%;height:100%;object-fit:cover}
-  .range-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
-  .range-btn{padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;border:none;background:#e2e8f0;color:#333}
-  .range-btn.active{background:#0f172a;color:#fff}
-  .custom-range{display:none;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:#666;flex-wrap:wrap}
-  .custom-range.show{display:flex}
-  .custom-range input{width:auto;padding:6px 8px;margin:0;font-size:13px}
   .stat-row{margin-bottom:10px}
   .stat-row:last-child{margin-bottom:0}
   .stat-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
   .stat-bar{height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden}
   .stat-bar-fill{height:100%;background:#0f172a;border-radius:3px}
+  .stat-bar-fill.alt{background:#94a3b8}
   .pin-wrap{text-align:center;margin-top:80px}
   .pin-wrap h1{font-size:24px;margin-bottom:8px}
   .pin-wrap p{color:#888;font-size:14px;margin-bottom:20px}
   .pin-card{text-align:left;max-width:320px;margin:0 auto}
   .err{color:#e11d48;font-size:12px;margin-bottom:8px}
   .time-hint{font-size:12px;color:#888;padding:8px;background:#f8f9fa;border-radius:8px;margin-bottom:12px}
+  .card-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+  .card-title-label{font-size:15px;color:#666}
+  .card-title-total{font-size:24px;font-weight:600}
+  .card-title-unit{font-size:13px;color:#888;margin-left:4px;font-weight:400}
+
+  /* 统计 tab */
+  .stat-tabs{display:flex;gap:6px;margin-bottom:16px}
+  .stat-tab{flex:1;padding:8px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#333;text-align:center}
+  .stat-tab.active{background:#0f172a;color:#fff;border-color:#0f172a}
+
+  /* 日历 */
+  .cal{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;margin-bottom:12px;user-select:none}
+  .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .cal-header button{background:none;border:none;font-size:20px;cursor:pointer;padding:2px 10px;color:#666;border-radius:6px}
+  .cal-header button:hover{background:#f1f5f9}
+  .cal-header .cal-title{display:flex;gap:4px;font-size:14px;font-weight:500}
+  .cal-header .cal-title select{border:none;background:transparent;font-size:14px;font-weight:500;cursor:pointer;outline:none;padding:2px;color:#333;font-family:inherit}
+  .cal-week{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:#999;margin-bottom:4px}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;touch-action:none}
+  .cal-day{text-align:center;padding:8px 0;font-size:13px;cursor:pointer;border-radius:6px;color:#333;transition:.05s}
+  .cal-day:hover{background:#f1f5f9}
+  .cal-day.empty{visibility:hidden;cursor:default}
+  .cal-day.today{font-weight:700;color:#0f172a}
+  .cal-day.in-range{background:#e0e7ff;color:#3730a3;border-radius:0}
+  .cal-day.range-start{background:#0f172a;color:#fff;border-radius:6px 0 0 6px}
+  .cal-day.range-end{background:#0f172a;color:#fff;border-radius:0 6px 6px 0}
+  .cal-day.range-start.range-end{border-radius:6px}
+  .cal-day.in-range.today{color:#3730a3}
+  .cal-day.range-start.today,.cal-day.range-end.today{color:#fff}
+
+  .cal-wrap{display:grid;gap:12px}
+  .cal-wrap.double{grid-template-columns:1fr 1fr}
+  @media (max-width:520px){
+    .cal-wrap.double{grid-template-columns:1fr}
+  }
+  .range-info{font-size:13px;color:#333;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;padding:0 4px}
+  .range-info .clear-btn{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;padding:4px}
 </style>
 </head>
 <body>
@@ -69,14 +101,32 @@ function fmtNum(n){ var x=Number(n); if(!isFinite(x)) return '0'; return String(
 function LSread(k,def){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
 function LSwrite(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){ alert('保存失败，可能浏览器空间不足'); } }
 function dataKey(id){ return 'lifelog_data_'+id; }
+function toDatetimeLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function normalizeMonth(y,m){ while(m<0){m+=12;y--;} while(m>11){m-=12;y++;} return {year:y,month:m}; }
+function todayStr(){ return dayKey(new Date().toISOString()); }
+function firstOfMonthStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-01'; }
 
-/* 精度标签 */
-var PREC_LABEL = { minute:'分钟', hour:'小时', day:'日', month:'月', year:'年', none:'无时间' };
+var PREC_LABEL = {
+  minute:'精确到分钟', hour:'精确到小时', day:'精确到日',
+  month:'精确到月份', year:'精确到年份', none:'不记录时间'
+};
 
 /* ============ 状态 ============ */
 var state = {
   view:'lock', accounts:[], currentAccountId:null, data:null,
-  modal:null, range:'today', customFrom:'', customTo:'', pinError:''
+  modal:null, pinError:''
+};
+
+/* 统计状态 */
+var statState = {
+  tab: 'single',
+  single: { year: new Date().getFullYear(), month: new Date().getMonth() },
+  left:   { year: new Date().getFullYear(), month: new Date().getMonth() },
+  right:  (function(){ var n = normalizeMonth(new Date().getFullYear(), new Date().getMonth()+1); return { year:n.year, month:n.month }; })(),
+  selStart: firstOfMonthStr(),
+  selEnd: todayStr(),
+  dragging: false,
+  dragOrigin: null
 };
 
 /* ============ PIN ============ */
@@ -128,19 +178,18 @@ function defaultTemplates(){
   ];
 }
 
-/* ============ 时间精度解析 ============ */
-function renderTimeInput(precision, currentAt){
-  var d = currentAt ? new Date(currentAt) : new Date();
+/* ============ 时间输入 ============ */
+function renderTimeInput(precision){
+  var d = new Date();
   if (precision === 'minute') {
-    var v = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
-    return '<input id="recAt" class="inp" type="datetime-local" value="'+v+'">';
+    return '<input id="recAt" class="inp" type="datetime-local" value="'+toDatetimeLocal(d)+'">';
   }
   if (precision === 'hour') {
     var dv = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
     var opts = '';
     for (var i=0;i<24;i++) opts += '<option value="'+i+'"'+(i===d.getHours()?' selected':'')+'>'+pad(i)+' 时</option>';
-    return '<div style="display:flex;gap:8px"><input id="recAt" class="inp" type="date" value="'+dv+'" style="flex:2">'+
-      '<select id="recHour" class="inp" style="flex:1">'+opts+'</select></div>';
+    return '<div style="display:flex;gap:8px"><input id="recAt" class="inp" type="date" value="'+dv+'" style="flex:2;margin-bottom:0">'+
+      '<select id="recHour" class="inp" style="flex:1;margin-bottom:0">'+opts+'</select></div><div style="height:12px"></div>';
   }
   if (precision === 'day') {
     var dv2 = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -297,33 +346,143 @@ function delTemplate(id){
   saveData(); closeModal(); render();
 }
 
-/* ============ 统计 ============ */
-function getRangeBounds(){
-  var r = state.range;
-  var endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
-  if (r === 'all') return [0, endOfToday.getTime()];
-  if (r === 'custom') {
-    var f = state.customFrom ? new Date(state.customFrom + 'T00:00:00').getTime() : 0;
-    var t = state.customTo ? new Date(state.customTo + 'T23:59:59').getTime() : endOfToday.getTime();
-    return [f, t];
-  }
-  var d = new Date(); d.setHours(0,0,0,0);
-  if (r === 'today')   return [d.getTime(), endOfToday.getTime()];
-  if (r === 'week')    { var w=(d.getDay()+6)%7; d.setDate(d.getDate()-w); return [d.getTime(), endOfToday.getTime()]; }
-  if (r === 'month')   { d.setDate(1); return [d.getTime(), endOfToday.getTime()]; }
-  if (r === '7days')   { d.setDate(d.getDate()-6); return [d.getTime(), endOfToday.getTime()]; }
-  if (r === '30days')  { d.setDate(d.getDate()-29); return [d.getTime(), endOfToday.getTime()]; }
-  return [d.getTime(), endOfToday.getTime()];
+/* ============ 日历交互 ============ */
+function setStatTab(t){ statState.tab = t; render(); }
+function calPrev(which){
+  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+  o.month -= 1;
+  var n = normalizeMonth(o.year, o.month);
+  o.year = n.year; o.month = n.month;
+  render();
 }
-function buildStats(){
-  var bounds = getRangeBounds();
+function calNext(which){
+  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+  o.month += 1;
+  var n = normalizeMonth(o.year, o.month);
+  o.year = n.year; o.month = n.month;
+  render();
+}
+function calSetYear(which, v){
+  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+  o.year = parseInt(v,10); render();
+}
+function calSetMonth(which, v){
+  var o = which==='single' ? statState.single : which==='left' ? statState.left : statState.right;
+  o.month = parseInt(v,10); render();
+}
+function calDayDown(dateStr){
+  var s = statState;
+  if (s.selStart && s.selEnd) {
+    s.selStart = dateStr; s.selEnd = null;
+  } else if (s.selStart && !s.selEnd) {
+    if (dateStr >= s.selStart) { s.selEnd = dateStr; }
+    else { s.selEnd = s.selStart; s.selStart = dateStr; }
+  } else {
+    s.selStart = dateStr; s.selEnd = null;
+  }
+  s.dragOrigin = dateStr;
+  s.dragging = true;
+  render();
+}
+function calDayEnter(dateStr){
+  var s = statState;
+  if (!s.dragging || !s.dragOrigin) return;
+  if (dateStr >= s.dragOrigin) { s.selStart = s.dragOrigin; s.selEnd = dateStr; }
+  else { s.selStart = dateStr; s.selEnd = s.dragOrigin; }
+  render();
+}
+function clearSel(){
+  statState.selStart = null;
+  statState.selEnd = null;
+  statState.dragging = false;
+  statState.dragOrigin = null;
+  render();
+}
+document.addEventListener('pointerup', function(){
+  if (statState.dragging) statState.dragging = false;
+});
+document.addEventListener('pointerdown', function(e){
+  var el = e.target.closest && e.target.closest('[data-cal-date]');
+  if (!el) return;
+  e.preventDefault();
+  calDayDown(el.dataset.calDate);
+});
+document.addEventListener('pointermove', function(e){
+  if (!statState.dragging) return;
+  var el = document.elementFromPoint(e.clientX, e.clientY);
+  if (el && el.dataset && el.dataset.calDate) calDayEnter(el.dataset.calDate);
+});
+
+/* ============ 日历渲染 ============ */
+function renderCalendar(which, year, month){
+  var first = new Date(year, month, 1);
+  var startWeekday = (first.getDay() + 6) % 7;
+  var daysInMonth = new Date(year, month+1, 0).getDate();
+  var tds = todayStr();
+  var s = statState;
+
+  var yearOpts = '';
+  for (var y=year-5; y<=year+5; y++) yearOpts += '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'年</option>';
+  var monthOpts = '';
+  for (var m=0;m<12;m++) monthOpts += '<option value="'+m+'"'+(m===month?' selected':'')+'>'+(m+1)+'月</option>';
+
+  var html = '<div class="cal">';
+  html += '<div class="cal-header">'+
+    '<button type="button" onclick="calPrev(\''+which+'\')">‹</button>'+
+    '<div class="cal-title">'+
+    '<select onchange="calSetYear(\''+which+'\', this.value)">'+yearOpts+'</select>'+
+    '<select onchange="calSetMonth(\''+which+'\', this.value)">'+monthOpts+'</select>'+
+    '</div>'+
+    '<button type="button" onclick="calNext(\''+which+'\')">›</button>'+
+    '</div>';
+  html += '<div class="cal-week"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>';
+  html += '<div class="cal-grid">';
+  for (var i=0;i<startWeekday;i++) html += '<div class="cal-day empty"></div>';
+  for (var d=1;d<=daysInMonth;d++) {
+    var dateStr = year+'-'+pad(month+1)+'-'+pad(d);
+    var cls = 'cal-day';
+    if (dateStr === tds) cls += ' today';
+    if (s.selStart && s.selEnd && dateStr >= s.selStart && dateStr <= s.selEnd) cls += ' in-range';
+    if (dateStr === s.selStart) cls += ' range-start';
+    if (dateStr === s.selEnd) cls += ' range-end';
+    html += '<div class="'+cls+'" data-cal-date="'+dateStr+'">'+d+'</div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+function fmtRangeInfo(){
+  var s = statState;
+  if (!s.selStart) return '未选择区间';
+  var a = s.selStart, b = s.selEnd || s.selStart;
+  var d1 = new Date(a+'T00:00:00'), d2 = new Date(b+'T00:00:00');
+  var days = Math.round((d2-d1)/86400000) + 1;
+  var fmt = function(d){
+    var y = d.getFullYear();
+    var thisY = new Date().getFullYear();
+    var prefix = (y===thisY) ? '' : y+'年';
+    return prefix + (d.getMonth()+1)+'月'+d.getDate()+'日';
+  };
+  return fmt(d1) + ' — ' + fmt(d2) + ' · 共 ' + days + ' 天';
+}
+
+/* ============ 统计计算 ============ */
+function getActiveBounds(){
+  var s = statState;
+  if (!s.selStart) return [0, Date.now()];
+  var a = new Date(s.selStart + 'T00:00:00').getTime();
+  var b = s.selEnd ? new Date(s.selEnd + 'T23:59:59').getTime() : new Date(s.selStart + 'T23:59:59').getTime();
+  return [a, b];
+}
+function filterRecords(){
+  var bounds = getActiveBounds();
   var from = bounds[0], to = bounds[1];
-  var isAll = state.range === 'all';
-  var rs = state.data.records.filter(function(r){
-    if (r.at === null || r.at === undefined || r.at === '') return isAll; // 无时间的只在"全部"里算
+  return state.data.records.filter(function(r){
+    if (r.at === null || r.at === undefined || r.at === '') return false;
     var t = new Date(r.at).getTime();
     return t >= from && t <= to;
   });
+}
+function buildAmountStats(rs){
   var byUnit={};
   rs.forEach(function(r){
     var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0];
@@ -343,16 +502,18 @@ function buildStats(){
   result.sort(function(a,b){ return b.total-a.total; });
   return result;
 }
-function setRange(r){
-  state.range = r;
-  if (r === 'custom') {
-    if (!state.customFrom) { var d = new Date(); d.setDate(1); state.customFrom = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-    if (!state.customTo) { var t = new Date(); state.customTo = t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); }
-  }
-  render();
+function buildContentStats(rs){
+  var byTpl={};
+  rs.forEach(function(r){
+    var t=state.data.templates.filter(function(x){return x.id===r.templateId;})[0];
+    if(!t) return;
+    if(!byTpl[t.id]) byTpl[t.id]={ name:t.name, icon:t.icon, image:t.image, count:0, unit:t.unit||'', amountCount:0, contentCount:0 };
+    byTpl[t.id].count += 1;
+    if (r.amount !== null && r.amount !== undefined && r.amount !== '') byTpl[t.id].amountCount += 1;
+    if (r.content) byTpl[t.id].contentCount += 1;
+  });
+  return Object.keys(byTpl).map(function(k){ return byTpl[k]; }).sort(function(a,b){ return b.count - a.count; });
 }
-function setCustomFrom(v){ state.customFrom = v; render(); }
-function setCustomTo(v){ state.customTo = v; render(); }
 
 /* ============ 渲染 ============ */
 function render(){
@@ -476,36 +637,73 @@ function recordRow(r){
     '</div>';
 }
 function renderStats(){
-  var quick = [
-    ['today','今日'],['week','本周'],['month','本月'],
-    ['7days','最近7天'],['30days','最近30天'],
-    ['all','全部'],['custom','自定义']
-  ];
+  var s = statState;
   var html='<div class="header"><b>统计</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
-  html+='<div class="range-wrap">';
-  quick.forEach(function(r){
-    html+='<button class="range-btn'+(state.range===r[0]?' active':'')+'" onclick="setRange(\''+r[0]+'\')">'+r[1]+'</button>';
-  });
-  html+='</div>';
-  if (state.range === 'custom') {
-    html+='<div class="custom-range show"><span>从</span><input type="date" class="inp" value="'+esc(state.customFrom)+'" onchange="setCustomFrom(this.value)">'+
-      '<span>到</span><input type="date" class="inp" value="'+esc(state.customTo)+'" onchange="setCustomTo(this.value)"></div>';
+
+  html+='<div class="stat-tabs">'+
+    '<div class="stat-tab'+(s.tab==='single'?' active':'')+'" onclick="setStatTab(\'single\')">单月选择</div>'+
+    '<div class="stat-tab'+(s.tab==='double'?' active':'')+'" onclick="setStatTab(\'double\')">跨月选择</div>'+
+    '</div>';
+
+  if (s.tab === 'single') {
+    html += renderCalendar('single', s.single.year, s.single.month);
+    html += '<div class="range-info"><span>'+fmtRangeInfo()+'</span>'+
+      (s.selStart ? '<button class="clear-btn" onclick="clearSel()">清空</button>' : '')+'</div>';
+    html += '<div style="font-size:11px;color:#aaa;margin-bottom:12px;padding:0 4px">按住拖动或点两下选择一段区间</div>';
+  } else {
+    html += '<div class="cal-wrap double">';
+    html += renderCalendar('left', s.left.year, s.left.month);
+    html += renderCalendar('right', s.right.year, s.right.month);
+    html += '</div>';
+    html += '<div class="range-info"><span>'+fmtRangeInfo()+'</span>'+
+      (s.selStart ? '<button class="clear-btn" onclick="clearSel()">清空</button>' : '')+'</div>';
+    html += '<div style="font-size:11px;color:#aaa;margin-bottom:12px;padding:0 4px">点两下选起点和终点，适合跨月跨年</div>';
   }
-  var stats=buildStats();
-  if(!stats.length){ html+='<div class="card"><p class="empty">这段时间还没有带数值的记录</p></div>'; return html; }
-  stats.forEach(function(s){
-    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">'+
-      '<div style="font-size:15px;color:#666">'+esc(s.unit)+'</div>'+
-      '<div><span style="font-size:24px;font-weight:600">'+fmtNum(s.total)+'</span>'+
-      '<span style="font-size:13px;color:#888;margin-left:4px">'+esc(s.unit)+'</span></div></div>';
-    s.items.forEach(function(it){
-      var pct=s.total>0?(it.sum/s.total*100):0;
-      html+='<div class="stat-row"><div class="stat-label"><span>'+esc(it.icon)+' '+esc(it.name)+' <span class="tag">'+it.count+'笔</span></span>'+
-        '<span><b>'+fmtNum(it.sum)+'</b> '+esc(s.unit)+' <span style="color:#aaa;margin-left:4px">'+Math.round(pct)+'%</span></span></div>'+
-        '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pct+'%"></div></div></div>';
+
+  var rs = filterRecords();
+  var amountStats = buildAmountStats(rs);
+  var contentStats = buildContentStats(rs);
+
+  if (!rs.length) {
+    html+='<div class="card"><p class="empty">这段时间还没有记录</p></div>';
+    return html;
+  }
+
+  if (amountStats.length) {
+    amountStats.forEach(function(st){
+      html+='<div class="card"><div class="card-title">'+
+        '<div class="card-title-label">'+esc(st.unit)+'</div>'+
+        '<div><span class="card-title-total">'+fmtNum(st.total)+'</span>'+
+        '<span class="card-title-unit">'+esc(st.unit)+'</span></div></div>';
+      st.items.forEach(function(it){
+        var pct=st.total>0?(it.sum/st.total*100):0;
+        html+='<div class="stat-row"><div class="stat-label"><span>'+(it.image?'<img src="'+it.image+'" style="width:16px;height:16px;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-right:4px">':esc(it.icon)+' ')+esc(it.name)+' <span class="tag">'+it.count+'笔</span></span>'+
+          '<span><b>'+fmtNum(it.sum)+'</b> '+esc(st.unit)+' <span style="color:#aaa;margin-left:4px">'+Math.round(pct)+'%</span></span></div>'+
+          '<div class="stat-bar"><div class="stat-bar-fill" style="width:'+pct+'%"></div></div></div>';
+      });
+      html+='</div>';
+    });
+  }
+
+  if (contentStats.length) {
+    var totalCount = contentStats.reduce(function(a,c){ return a + c.count; }, 0);
+    html+='<div class="card"><div class="card-title">'+
+      '<div class="card-title-label">记录条数</div>'+
+      '<div><span class="card-title-total">'+totalCount+'</span>'+
+      '<span class="card-title-unit">条</span></div></div>';
+    contentStats.forEach(function(it){
+      var pct = totalCount>0 ? (it.count/totalCount*100) : 0;
+      var detail = [];
+      if (it.amountCount) detail.push(it.amountCount+' 条数值');
+      if (it.contentCount) detail.push(it.contentCount+' 条内容');
+      html+='<div class="stat-row"><div class="stat-label">'+
+        '<span>'+(it.image?'<img src="'+it.image+'" style="width:16px;height:16px;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-right:4px">':esc(it.icon)+' ')+esc(it.name)+' <span class="tag">'+detail.join(' · ')+'</span></span>'+
+        '<span><b>'+it.count+'</b> 条</span></div>'+
+        '<div class="stat-bar"><div class="stat-bar-fill alt" style="width:'+pct+'%"></div></div></div>';
     });
     html+='</div>';
-  });
+  }
+
   return html;
 }
 function renderSettings(){
@@ -513,7 +711,7 @@ function renderSettings(){
   var html='<div class="header"><b>设置</b><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="state.view=\'home\';render()">返回</button></div>';
   html+='<div class="card"><b style="font-size:14px">我的模板</b>';
   ts.forEach(function(t){
-    var pl = PREC_LABEL[t.precision] || '分钟';
+    var pl = PREC_LABEL[t.precision] || '精确到分钟';
     html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0">'+
       (t.image?'<div class="rec-icon"><img src="'+t.image+'"></div>':'<div class="rec-icon">'+esc(t.icon)+'</div>')+
       '<div style="flex:1;font-size:14px">'+esc(t.name)+' <span class="tag">'+esc(t.unit||'')+' · '+pl+'</span></div>'+
@@ -537,7 +735,7 @@ function renderModal(){
       '<b>'+esc(t.name)+'</b><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px" onclick="closeModal()">✕</button></div>';
     if(t.amountEnabled) html+='<input id="recAmt" class="inp" type="number" step="any" placeholder="数值（'+(t.unit||'')+'）">';
     if(t.contentEnabled) html+='<input id="recCon" class="inp" placeholder="'+(t.contentHint||'内容')+'">';
-    html += renderTimeInput(prec, null);
+    html += renderTimeInput(prec);
     html+='<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-secondary" style="flex:1" onclick="closeModal()">取消</button><button class="btn btn-primary" style="flex:1" onclick="saveRecord()">保存</button></div>';
   }
   else if(m.type==='template'){
@@ -559,9 +757,9 @@ function renderModal(){
     html+='<select id="tplPrec" class="inp">'+
       '<option value="minute" '+(prec==='minute'?'selected':'')+'>精确到分钟</option>'+
       '<option value="hour" '+(prec==='hour'?'selected':'')+'>精确到小时</option>'+
-      '<option value="day" '+(prec==='day'?'selected':'')+'>只记日期</option>'+
-      '<option value="month" '+(prec==='month'?'selected':'')+'>只记月份</option>'+
-      '<option value="year" '+(prec==='year'?'selected':'')+'>只记年份</option>'+
+      '<option value="day" '+(prec==='day'?'selected':'')+'>精确到日</option>'+
+      '<option value="month" '+(prec==='month'?'selected':'')+'>精确到月份</option>'+
+      '<option value="year" '+(prec==='year'?'selected':'')+'>精确到年份</option>'+
       '<option value="none" '+(prec==='none'?'selected':'')+'>不记录时间</option>'+
       '</select>';
     html+='<label style="display:block;font-size:14px;margin:8px 0"><input type="checkbox" id="tplAmt" '+(t.amountEnabled?'checked':'')+'> 记录数值</label>';
